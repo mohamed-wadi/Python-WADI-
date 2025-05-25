@@ -1,0 +1,38 @@
+{% extends 'base/main.html' %}
+
+{% block title %}Supprimer le Cours{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="card-title mb-0">Confirmer la suppression</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> u00cates-vous su00fbr de vouloir supprimer ce cours?
+                    </p>
+                    <div class="mb-4">
+                        <h5>{{ cours.matiere.nom }} - {{ cours.classe.nom }}</h5>
+                        <p class="text-muted">{{ cours.jour }} de {{ cours.heure_debut|time:"H:i" }} u00e0 {{ cours.heure_fin|time:"H:i" }}</p>
+                        <p>Professeur: {{ cours.professeur.nom }} {{ cours.professeur.prenom }}</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center">
+                            <a href="{% url 'cours-detail' cours.id %}" class="btn btn-secondary me-2">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

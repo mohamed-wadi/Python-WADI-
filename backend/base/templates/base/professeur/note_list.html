@@ -1,0 +1,183 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Gestion des notes{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestion des notes</h1>
+        <a href="{% url 'base:professeur-note-create' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Ajouter une note
+        </a>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Filtres</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="classe">Classe</label>
+                    <select name="classe" id="classe" class="form-select">
+                        <option value="">Toutes les classes</option>
+                        {% for classe in classes %}
+                            <option value="{{ classe.id }}" {% if request.GET.classe == classe.id|stringformat:"i" %}selected{% endif %}>
+                                {{ classe.nom }} ({{ classe.niveau }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="matiere">Matière</label>
+                    <select name="matiere" id="matiere" class="form-select">
+                        <option value="">Toutes les matières</option>
+                        {% for matiere in matieres %}
+                            <option value="{{ matiere.id }}" {% if request.GET.matiere == matiere.id|stringformat:"i" %}selected{% endif %}>
+                                {{ matiere.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="etudiant">Étudiant</label>
+                    <select name="etudiant" id="etudiant" class="form-select">
+                        <option value="">Tous les étudiants</option>
+                        {% for etudiant in etudiants %}
+                            <option value="{{ etudiant.id }}" {% if request.GET.etudiant == etudiant.id|stringformat:"i" %}selected{% endif %}>
+                                {{ etudiant.prenom }} {{ etudiant.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="trimestre">Trimestre</label>
+                    <select name="trimestre" id="trimestre" class="form-select">
+                        <option value="">Tous</option>
+                        {% for trimestre_id, trimestre_name in trimestres %}
+                            <option value="{{ trimestre_id }}" {% if request.GET.trimestre == trimestre_id|stringformat:"i" %}selected{% endif %}>
+                                {{ trimestre_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filtrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Liste des notes -->
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Liste des notes</h5>
+        </div>
+        <div class="card-body">
+            {% if notes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Étudiant</th>
+                                <th>Classe</th>
+                                <th>Matière</th>
+                                <th>Valeur</th>
+                                <th>Trimestre</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for note in notes %}
+                                <tr>
+                                    <td>{{ note.etudiant.prenom }} {{ note.etudiant.nom }}</td>
+                                    <td>{{ note.etudiant.classe.nom }}</td>
+                                    <td>{{ note.matiere.nom }}</td>
+                                    <td>{{ note.valeur|floatformat:2 }}</td>
+                                    <td>
+                                        {% if note.trimestre == 1 %}1er Trimestre
+                                        {% elif note.trimestre == 2 %}2ème Trimestre
+                                        {% elif note.trimestre == 3 %}3ème Trimestre
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ note.type_evaluation }}</td>
+                                    <td>{{ note.date_evaluation|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <a href="{% url 'base:professeur-note-update' note.id %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'base:professeur-note-delete' note.id %}" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if is_paginated %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                                        <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-info">
+                    Aucune note ne correspond aux critères de filtrage. <a href="{% url 'base:professeur-note-create' %}" class="alert-link">Ajouter une note</a>.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{% url 'base:professeur-dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour au tableau de bord
+        </a>
+        <a href="{% url 'base:professeur-notes-par-classe' %}" class="btn btn-info">
+            <i class="fas fa-users"></i> Gestion par classe
+        </a>
+    </div>
+</div>
+{% endblock %} 

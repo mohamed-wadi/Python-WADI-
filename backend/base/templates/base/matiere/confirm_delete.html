@@ -1,0 +1,44 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Supprimer la matiu00e8re{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Confirmation de suppression
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="my-4">
+                        <i class="fas fa-book-dead fa-5x text-danger mb-4"></i>
+                        
+                        <h4>u00cates-vous su00fbr de vouloir supprimer la matiu00e8re :</h4>
+                        <p class="h5 mb-4">{{ matiere.nom }} ({{ matiere.code }})</p>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Attention :</strong> Cette action est irru00e9versible. Toutes les notes associu00e9es u00e0 cette matiu00e8re seront u00e9galement supprimu00e9es.
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="d-inline-block">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'base:matiere-detail' matiere.id %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash me-2"></i> Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

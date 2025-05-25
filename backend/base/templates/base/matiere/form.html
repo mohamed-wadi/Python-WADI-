@@ -1,0 +1,101 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ title }}</h1>
+        <a href="{% if object %}{% url 'base:matiere-detail' object.id %}{% else %}{% url 'base:matiere-list' %}{% endif %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                {% if object %}
+                    <i class="fas fa-edit"></i> Modifier les informations de la matiu00e8re
+                {% else %}
+                    <i class="fas fa-plus-circle"></i> Ajouter une nouvelle matiu00e8re
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations de base</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" name="nom" id="id_nom" class="form-control {% if form.nom.errors %}is-invalid{% endif %}" value="{{ form.nom.value|default:'' }}" required>
+                            {% if form.nom.errors %}
+                                <div class="invalid-feedback">{{ form.nom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_code" class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" name="code" id="id_code" class="form-control {% if form.code.errors %}is-invalid{% endif %}" value="{{ form.code.value|default:'' }}" required>
+                            {% if form.code.errors %}
+                                <div class="invalid-feedback">{{ form.code.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Code unique permettant d'identifier la matiu00e8re (ex: MATH101)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_coefficient" class="form-label">Coefficient <span class="text-danger">*</span></label>
+                            <input type="number" name="coefficient" id="id_coefficient" class="form-control {% if form.coefficient.errors %}is-invalid{% endif %}" value="{{ form.coefficient.value|default:'1' }}" min="1" max="10" required>
+                            {% if form.coefficient.errors %}
+                                <div class="invalid-feedback">{{ form.coefficient.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Assignations</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_professeur" class="form-label">Professeur</label>
+                            <select name="professeur" id="id_professeur" class="form-select {% if form.professeur.errors %}is-invalid{% endif %}">
+                                <option value="" {% if not form.professeur.value %}selected{% endif %}>-- Su00e9lectionner un professeur --</option>
+                                {% for professeur in form.fields.professeur.queryset %}
+                                    <option value="{{ professeur.id }}" {% if form.professeur.value|stringformat:'i' == professeur.id|stringformat:'i' %}selected{% endif %}>
+                                        {{ professeur.prenom }} {{ professeur.nom }} ({{ professeur.specialite }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.professeur.errors %}
+                                <div class="invalid-feedback">{{ form.professeur.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_classes" class="form-label">Classes</label>
+                            <select name="classes" id="id_classes" class="form-select {% if form.classes.errors %}is-invalid{% endif %}" multiple size="8">
+                                {% for classe in form.fields.classes.queryset %}
+                                    <option value="{{ classe.id }}" {% if classe in form.classes.value %}selected{% endif %}>
+                                        {{ classe.nom }} - {{ classe.niveau }} ({{ classe.annee_scolaire }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.classes.errors %}
+                                <div class="invalid-feedback">{{ form.classes.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Maintenez la touche Ctrl (ou Cmd sur Mac) pour su00e9lectionner plusieurs classes.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary" onclick="window.history.back();">Annuler</button>
+                    <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

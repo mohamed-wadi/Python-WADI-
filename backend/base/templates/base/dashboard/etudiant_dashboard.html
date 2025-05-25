@@ -1,0 +1,228 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Tableau de Bord Étudiant{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Tableau de bord - {{ etudiant.prenom }} {{ etudiant.nom }}</h1>
+    
+    <div class="row">
+        <!-- Profil -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Profil</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Classe:</strong> {{ etudiant.classe }}</p>
+                    <p><strong>Matricule:</strong> {{ etudiant.numero_matricule }}</p>
+                    <p><strong>Email:</strong> {{ etudiant.email }}</p>
+                    <p><strong>Âge:</strong> {{ etudiant.age }} ans</p>
+                    <a href="#" class="btn btn-sm btn-outline-primary">Voir profil complet</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistiques -->
+        <div class="col-md-8 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Statistiques</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="h3 mb-0">{{ etudiant.moyenne_generale|floatformat:2 }}</div>
+                            <div class="small text-muted">Moyenne générale</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="h3 mb-0">{{ bulletins|first.rang|default:"N/A" }}</div>
+                            <div class="small text-muted">Rang (dernier trimestre)</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="h3 mb-0">{{ absences.count }}</div>
+                            <div class="small text-muted">Absences</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notes par matière et trimestre -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Notes par matière</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Matière</th>
+                        <th>Coefficient</th>
+                        <th>1er Trimestre</th>
+                        <th>2ème Trimestre</th>
+                        <th>3ème Trimestre</th>
+                        <th>Moyenne</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for moyenne in moyennes_par_matiere %}
+                    <tr>
+                        <td>{{ moyenne.matiere.nom }}</td>
+                        <td>{{ moyenne.matiere.coefficient }}</td>
+                        <td>
+                            {% for m in moyennes_par_matiere %}
+                                {% if m.matiere == moyenne.matiere and m.trimestre == 1 %}
+                                    {{ m.moyenne|floatformat:2 }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for m in moyennes_par_matiere %}
+                                {% if m.matiere == moyenne.matiere and m.trimestre == 2 %}
+                                    {{ m.moyenne|floatformat:2 }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for m in moyennes_par_matiere %}
+                                {% if m.matiere == moyenne.matiere and m.trimestre == 3 %}
+                                    {{ m.moyenne|floatformat:2 }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>{{ moyenne.moyenne|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">Aucune note disponible</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Emploi du temps -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Emploi du temps</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Jour</th>
+                        <th>Matière</th>
+                        <th>Horaire</th>
+                        <th>Salle</th>
+                        <th>Professeur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cours in emploi_du_temps %}
+                    <tr>
+                        <td>{{ cours.jour }}</td>
+                        <td>{{ cours.matiere.nom }}</td>
+                        <td>{{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }}</td>
+                        <td>{{ cours.salle }}</td>
+                        <td>{{ cours.professeur.prenom }} {{ cours.professeur.nom }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">Aucun cours programmé</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Bulletins -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Bulletins</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Trimestre</th>
+                            <th>Année scolaire</th>
+                            <th>Moyenne générale</th>
+                            <th>Rang</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bulletin in bulletins %}
+                        <tr>
+                            <td>
+                                {% if bulletin.trimestre == 1 %}1er Trimestre
+                                {% elif bulletin.trimestre == 2 %}2ème Trimestre
+                                {% elif bulletin.trimestre == 3 %}3ème Trimestre
+                                {% endif %}
+                            </td>
+                            <td>{{ bulletin.annee_scolaire }}</td>
+                            <td>{{ bulletin.moyenne_generale|floatformat:2 }}</td>
+                            <td>{{ bulletin.rang|default:"N/A" }}</td>
+                            <td>
+                                <a href="{% url 'base:bulletin-detail' bulletin.id %}" class="btn btn-sm btn-info">Détails</a>
+                                <a href="{% url 'base:bulletin-pdf' bulletin.id %}" class="btn btn-sm btn-secondary">PDF</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">Aucun bulletin disponible</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Absences -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Absences</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Début</th>
+                        <th>Fin</th>
+                        <th>Durée (jours)</th>
+                        <th>Justifiée</th>
+                        <th>Motif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for absence in absences %}
+                    <tr>
+                        <td>{{ absence.date_debut|date:"d/m/Y" }}</td>
+                        <td>{{ absence.date_fin|date:"d/m/Y" }}</td>
+                        <td>{{ absence.duree }}</td>
+                        <td>
+                            {% if absence.justifiee %}
+                                <span class="badge bg-success">Oui</span>
+                            {% else %}
+                                <span class="badge bg-danger">Non</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ absence.motif|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">Aucune absence enregistrée</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

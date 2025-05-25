@@ -1,0 +1,167 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Fiche professeur - {{ professeur.prenom }} {{ professeur.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Fiche professeur</h1>
+        <div>
+            <a href="{% url 'base:professeur-list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+            <a href="{% url 'base:professeur-update' professeur.id %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Modifier
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations personnelles -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user-circle"></i> Informations personnelles
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
+                            <i class="fas fa-chalkboard-teacher fa-4x text-primary"></i>
+                        </div>
+                        <h4 class="mt-3">{{ professeur.prenom }} {{ professeur.nom }}</h4>
+                        <p class="badge bg-info">{{ professeur.specialite }}</p>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-calendar-alt me-2 text-muted"></i> Date d'embauche:</span>
+                            <span class="text-muted">{{ professeur.date_embauche|date:"d/m/Y" }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-address-card"></i> Contact
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="fas fa-envelope me-2 text-muted"></i> {{ professeur.email }}
+                        </li>
+                        {% if professeur.telephone %}
+                        <li class="list-group-item">
+                            <i class="fas fa-phone me-2 text-muted"></i> {{ professeur.telephone }}
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matiu00e8res et Classes -->
+        <div class="col-md-8">
+            <!-- Onglets -->
+            <ul class="nav nav-tabs mb-4" id="professorTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="matieres-tab" data-bs-toggle="tab" data-bs-target="#matieres" type="button" role="tab">
+                        <i class="fas fa-book me-1"></i> Matiu00e8res enseigner
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="classes-tab" data-bs-toggle="tab" data-bs-target="#classes" type="button" role="tab">
+                        <i class="fas fa-users me-1"></i> Classes
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Contenu des onglets -->
+            <div class="tab-content" id="professorTabContent">
+                <!-- Onglet Matiu00e8res -->
+                <div class="tab-pane fade show active" id="matieres" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Matiu00e8res enseigner</h5>
+                        <a href="#" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Attribuer une matiu00e8re</a>
+                    </div>
+                    
+                    {% if matieres %}
+                        <div class="row">
+                            {% for matiere in matieres %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ matiere.nom }}</h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">Code: {{ matiere.code }}</h6>
+                                            <p class="card-text">
+                                                <span class="badge bg-secondary">Coefficient: {{ matiere.coefficient }}</span>
+                                            </p>
+                                            <p class="card-text">
+                                                <strong>Classes: </strong>
+                                                {% for classe in matiere.classes.all %}
+                                                    <span class="badge bg-info">{{ classe.nom }}</span>
+                                                {% empty %}
+                                                    <span class="text-muted">Aucune classe assignu00e9e</span>
+                                                {% endfor %}
+                                            </p>
+                                        </div>
+                                        <div class="card-footer bg-transparent">
+                                            <a href="#" class="btn btn-sm btn-outline-primary">Gu00e9rer</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Ce professeur n'enseigne aucune matiu00e8re pour le moment.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Onglet Classes -->
+                <div class="tab-pane fade" id="classes" role="tabpanel">
+                    <h5 class="mb-3">Classes</h5>
+                    {% if classes %}
+                        <div class="row">
+                            {% for classe in classes %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-info h-100">
+                                        <div class="card-header bg-info text-white">
+                                            {{ classe.nom }}
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-subtitle mb-2 text-muted">Niveau: {{ classe.niveau }}</h6>
+                                            <p class="card-text">Annu00e9e scolaire: {{ classe.annee_scolaire }}</p>
+                                            <p class="card-text">
+                                                <i class="fas fa-user-graduate"></i> {{ classe.nombre_etudiants }} u00e9tudiant(s)
+                                            </p>
+                                            <p class="card-text">
+                                                <strong>Matiu00e8res: </strong>
+                                                {% for matiere in matieres %}{% if classe in matiere.classes.all %}
+                                                    <span class="badge bg-primary">{{ matiere.nom }}</span>
+                                                {% endif %}{% endfor %}
+                                            </p>
+                                        </div>
+                                        <div class="card-footer bg-transparent">
+                                            <a href="#" class="btn btn-sm btn-outline-info">Voir la classe</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Ce professeur n'est assignu00e9 u00e0 aucune classe pour le moment.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

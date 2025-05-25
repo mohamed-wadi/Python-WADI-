@@ -1,0 +1,246 @@
+{% extends 'base/main.html' %}
+
+{% block title %}Statistiques - {{ classe.nom }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Statistiques - {{ classe.nom }}</h1>
+        <div>
+            <a href="http://127.0.0.1:8000/classes/{{ classe.id }}/" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour aux détails de la classe
+            </a>
+            <a href="http://127.0.0.1:8000/classes/" class="btn btn-info">
+                <i class="fas fa-list"></i> Liste des classes
+            </a>
+        </div>
+    </div>
+
+    <!-- Informations de la classe -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Informations de la classe</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <p><strong>Nom:</strong> {{ classe.nom }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>Niveau:</strong> {{ classe.niveau }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>Année scolaire:</strong> {{ classe.annee_scolaire }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>Effectif:</strong> {{ nb_etudiant }} étudiant(s)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Statistiques générales -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Statistiques générales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-2 text-muted">Moyenne générale</h6>
+                                    <h3 class="card-title">{{ moyenne_classe|default:'-'|floatformat:2 }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-2 text-muted">Nombre de Matiu00e8res</h6>
+                                    <h3 class="card-title">{{ nb_matieres }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6 class="fw-bold">Ru00e9partition par niveau</h6>
+                        <div class="progress" style="height: 25px;">
+                            {% if moyenne_classe %}                           
+                            {% if moyenne_classe >= 16 %}
+                            <div class="progress-bar bg-success" style="width: {{ moyenne_classe|floatformat:0 }}%">Très bien ({{ moyenne_classe|floatformat:2 }})</div>
+                            {% elif moyenne_classe >= 14 %}
+                            <div class="progress-bar bg-info" style="width: {{ moyenne_classe|floatformat:0 }}%">Bien ({{ moyenne_classe|floatformat:2 }})</div>
+                            {% elif moyenne_classe >= 12 %}
+                            <div class="progress-bar bg-primary" style="width: {{ moyenne_classe|floatformat:0 }}%">Assez bien ({{ moyenne_classe|floatformat:2 }})</div>
+                            {% elif moyenne_classe >= 10 %}
+                            <div class="progress-bar bg-warning" style="width: {{ moyenne_classe|floatformat:0 }}%">Passable ({{ moyenne_classe|floatformat:2 }})</div>
+                            {% else %}
+                            <div class="progress-bar bg-danger" style="width: {{ moyenne_classe|floatformat:0 }}%">Insuffisant ({{ moyenne_classe|floatformat:2 }})</div>
+                            {% endif %}
+                            {% else %}
+                            <div class="progress-bar bg-secondary" style="width: 100%">Aucune donnée disponible</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moyennes par matière -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Moyennes par matière</h5>
+                </div>
+                <div class="card-body">
+                    {% if moyennes_matieres %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Matiu00e8re</th>
+                                    <th>Professeur</th>
+                                    <th>Moyenne</th>
+                                    <th>Graphique</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in moyennes_matieres %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">{{ item.matiere.code }}</span>
+                                        {{ item.matiere.nom }}
+                                    </td>
+                                    <td>{% if item.matiere.professeur %}{{ item.matiere.professeur.nom }} {{ item.matiere.professeur.prenom }}{% else %}Non assigné{% endif %}</td>
+                                    <td>{{ item.moyenne|floatformat:2 }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            {% if item.moyenne >= 16 %}
+                                            <div class="progress-bar bg-success" style="width: {{ item.moyenne|floatformat:0 }}%"></div>
+                                            {% elif item.moyenne >= 14 %}
+                                            <div class="progress-bar bg-info" style="width: {{ item.moyenne|floatformat:0 }}%"></div>
+                                            {% elif item.moyenne >= 12 %}
+                                            <div class="progress-bar bg-primary" style="width: {{ item.moyenne|floatformat:0 }}%"></div>
+                                            {% elif item.moyenne >= 10 %}
+                                            <div class="progress-bar bg-warning" style="width: {{ item.moyenne|floatformat:0 }}%"></div>
+                                            {% else %}
+                                            <div class="progress-bar bg-danger" style="width: {{ item.moyenne|floatformat:0 }}%"></div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Aucune donnée disponible pour calculer les moyennes des matières.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique ru00e9capitulatif -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Statistiques détaillu00e9es</h5>
+        </div>
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">Ru00e9partition des moyennes</h6>
+            <canvas id="moyennesChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">Actions</h5>
+                </div>
+                <div class="card-body text-center">
+                    <a href="http://127.0.0.1:8000/bulletins/generer/" class="btn btn-lg btn-warning me-2">
+                        <i class="fas fa-file-alt"></i> Gu00e9nu00e9rer les bulletins
+                    </a>
+                    <a href="http://127.0.0.1:8000/classes/{{ classe.id }}/gestion-etudiants/" class="btn btn-lg btn-info me-2">
+                        <i class="fas fa-users"></i> Gu00e9rer les u00e9tudiants
+                    </a>
+                    <a href="http://127.0.0.1:8000/notes/par-classe/" class="btn btn-lg btn-success">
+                        <i class="fas fa-clipboard-list"></i> Saisir les notes
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">Information</h5>
+                </div>
+                <div class="card-body">
+                    <p>Ces statistiques sont gu00e9nu00e9ru00e9es automatiquement u00e0 partir des notes saisies pour les u00e9tudiants de cette classe.</p>
+                    <p>Pour obtenir des statistiques plus précises, assurez-vous que toutes les notes sont saisies pour tous les u00e9tudiants.</p>
+                    <p><strong>Note:</strong> Les moyennes sont calculées en tenant compte des coefficients des matières.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Donnu00e9es pour le graphique des moyennes par matière
+        const ctx = document.getElementById('moyennesChart').getContext('2d');
+        const matieresData = {
+            labels: [{% for item in moyennes_matieres %}"{{ item.matiere.nom }}",{% endfor %}],
+            datasets: [{
+                label: 'Moyenne par matière',
+                data: [{% for item in moyennes_matieres %}{{ item.moyenne }},{% endfor %}],
+                backgroundColor: [{% for item in moyennes_matieres %}
+                    {% if item.moyenne >= 16 %}'rgba(40, 167, 69, 0.5)',
+                    {% elif item.moyenne >= 14 %}'rgba(23, 162, 184, 0.5)',
+                    {% elif item.moyenne >= 12 %}'rgba(0, 123, 255, 0.5)',
+                    {% elif item.moyenne >= 10 %}'rgba(255, 193, 7, 0.5)',
+                    {% else %}'rgba(220, 53, 69, 0.5)',
+                    {% endif %}
+                {% endfor %}],
+                borderColor: [{% for item in moyennes_matieres %}
+                    {% if item.moyenne >= 16 %}'rgb(40, 167, 69)',
+                    {% elif item.moyenne >= 14 %}'rgb(23, 162, 184)',
+                    {% elif item.moyenne >= 12 %}'rgb(0, 123, 255)',
+                    {% elif item.moyenne >= 10 %}'rgb(255, 193, 7)',
+                    {% else %}'rgb(220, 53, 69)',
+                    {% endif %}
+                {% endfor %}],
+                borderWidth: 1
+            }]
+        };
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: matieresData,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 20
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

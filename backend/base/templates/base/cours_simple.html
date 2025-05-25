@@ -1,0 +1,130 @@
+{% extends 'base/main.html' %}
+
+{% block title %}Gestion des Cours{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestion des Cours</h1>
+    </div>
+    
+    <!-- Messages -->
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Associations Classes - Matiu00e8res - Professeurs</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Classe</th>
+                                    <th>Matiu00e8re</th>
+                                    <th>Professeur</th>
+                                    <th>Coeff.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for classe in classes %}
+                                    <tr class="table-primary">
+                                        <td colspan="4"><strong>{{ classe.nom }} ({{ classe.niveau }}) - Annu00e9e {{ classe.annee_scolaire }}</strong></td>
+                                    </tr>
+                                    {% for matiere in classe.matiere_set.all %}
+                                    <tr>
+                                        <td></td>
+                                        <td>{{ matiere.nom }} ({{ matiere.code }})</td>
+                                        <td>{% if matiere.professeur %}{{ matiere.professeur.nom }} {{ matiere.professeur.prenom }}{% else %}Non assignu00e9{% endif %}</td>
+                                        <td>{{ matiere.coefficient }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">Aucune matiu00e8re assignu00e9e u00e0 cette classe</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucune classe disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Gestion des Classes</h5>
+                </div>
+                <div class="card-body">
+                    <p>Ajoutez et gu00e9rez les classes de votre u00e9tablissement.</p>
+                    <a href="http://127.0.0.1:8000/classes/" class="btn btn-info w-100">
+                        <i class="fas fa-users"></i> Gu00e9rer les Classes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Gestion des Matiu00e8res</h5>
+                </div>
+                <div class="card-body">
+                    <p>Ajoutez et gu00e9rez les matiu00e8res enseignu00e9es dans votre u00e9tablissement.</p>
+                    <a href="http://127.0.0.1:8000/matieres/" class="btn btn-success w-100">
+                        <i class="fas fa-book"></i> Gu00e9rer les Matiu00e8res
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">Gestion des Professeurs</h5>
+                </div>
+                <div class="card-body">
+                    <p>Ajoutez et gu00e9rez les professeurs de votre u00e9tablissement.</p>
+                    <a href="http://127.0.0.1:8000/professeurs/" class="btn btn-warning w-100">
+                        <i class="fas fa-chalkboard-teacher"></i> Gu00e9rer les Professeurs
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">Gestion des Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p>Ajoutez et gu00e9rez les notes par classe et par matiu00e8re.</p>
+                    <a href="http://127.0.0.1:8000/notes/" class="btn btn-secondary w-100">
+                        <i class="fas fa-clipboard-list"></i> Gu00e9rer les Notes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

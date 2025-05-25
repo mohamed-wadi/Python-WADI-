@@ -1,0 +1,129 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ title }}</h1>
+        <a href="{% if object %}{% url 'base:etudiant-detail' object.id %}{% else %}{% url 'base:etudiant-list' %}{% endif %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                {% if object %}
+                    <i class="fas fa-edit"></i> Modifier les informations de l'u00e9tudiant
+                {% else %}
+                    <i class="fas fa-plus-circle"></i> Ajouter un nouvel u00e9tudiant
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations personnelles</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" name="nom" id="id_nom" class="form-control {% if form.nom.errors %}is-invalid{% endif %}" value="{{ form.nom.value|default:'' }}" required>
+                            {% if form.nom.errors %}
+                                <div class="invalid-feedback">{{ form.nom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_prenom" class="form-label">Pru00e9nom <span class="text-danger">*</span></label>
+                            <input type="text" name="prenom" id="id_prenom" class="form-control {% if form.prenom.errors %}is-invalid{% endif %}" value="{{ form.prenom.value|default:'' }}" required>
+                            {% if form.prenom.errors %}
+                                <div class="invalid-feedback">{{ form.prenom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_date_naissance" class="form-label">Date de naissance <span class="text-danger">*</span></label>
+                            <input type="date" name="date_naissance" id="id_date_naissance" class="form-control {% if form.date_naissance.errors %}is-invalid{% endif %}" value="{{ form.date_naissance.value|date:'Y-m-d'|default:'' }}" required>
+                            {% if form.date_naissance.errors %}
+                                <div class="invalid-feedback">{{ form.date_naissance.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_sexe" class="form-label">Sexe <span class="text-danger">*</span></label>
+                            <select name="sexe" id="id_sexe" class="form-select {% if form.sexe.errors %}is-invalid{% endif %}" required>
+                                <option value="" {% if not form.sexe.value %}selected{% endif %}>-- Su00e9lectionner --</option>
+                                <option value="M" {% if form.sexe.value == 'M' %}selected{% endif %}>Masculin</option>
+                                <option value="F" {% if form.sexe.value == 'F' %}selected{% endif %}>Fu00e9minin</option>
+                            </select>
+                            {% if form.sexe.errors %}
+                                <div class="invalid-feedback">{{ form.sexe.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_adresse" class="form-label">Adresse</label>
+                            <textarea name="adresse" id="id_adresse" class="form-control {% if form.adresse.errors %}is-invalid{% endif %}" rows="3">{{ form.adresse.value|default:'' }}</textarea>
+                            {% if form.adresse.errors %}
+                                <div class="invalid-feedback">{{ form.adresse.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations scolaires et contact</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_numero_matricule" class="form-label">Numu00e9ro de matricule <span class="text-danger">*</span></label>
+                            <input type="text" name="numero_matricule" id="id_numero_matricule" class="form-control {% if form.numero_matricule.errors %}is-invalid{% endif %}" value="{{ form.numero_matricule.value|default:'' }}" required>
+                            {% if form.numero_matricule.errors %}
+                                <div class="invalid-feedback">{{ form.numero_matricule.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_classe" class="form-label">Classe <span class="text-danger">*</span></label>
+                            <select name="classe" id="id_classe" class="form-select {% if form.classe.errors %}is-invalid{% endif %}" required>
+                                <option value="" {% if not form.classe.value %}selected{% endif %}>-- Su00e9lectionner --</option>
+                                {% for classe in form.fields.classe.queryset %}
+                                    <option value="{{ classe.id }}" {% if form.classe.value|stringformat:'i' == classe.id|stringformat:'i' %}selected{% endif %}>
+                                        {{ classe.nom }} - {{ classe.niveau }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.classe.errors %}
+                                <div class="invalid-feedback">{{ form.classe.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" id="id_email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" value="{{ form.email.value|default:'' }}" required>
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_telephone" class="form-label">Tu00e9lu00e9phone</label>
+                            <input type="tel" name="telephone" id="id_telephone" class="form-control {% if form.telephone.errors %}is-invalid{% endif %}" value="{{ form.telephone.value|default:'' }}">
+                            {% if form.telephone.errors %}
+                                <div class="invalid-feedback">{{ form.telephone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary" onclick="window.history.back();">Annuler</button>
+                    <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

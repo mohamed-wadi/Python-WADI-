@@ -1,0 +1,126 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ title }}</h1>
+        <a href="{% url 'base:note-list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                {% if object %}
+                    <i class="fas fa-edit"></i> Modifier les informations de la note
+                {% else %}
+                    <i class="fas fa-plus-circle"></i> Ajouter une nouvelle note
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations de base</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_etudiant" class="form-label">u00c9tudiant <span class="text-danger">*</span></label>
+                            <select name="etudiant" id="id_etudiant" class="form-select {% if form.etudiant.errors %}is-invalid{% endif %}" required>
+                                <option value="" {% if not form.etudiant.value %}selected{% endif %}>-- Su00e9lectionner un u00e9tudiant --</option>
+                                {% for etudiant in form.fields.etudiant.queryset %}
+                                    <option value="{{ etudiant.id }}" {% if form.etudiant.value|stringformat:'i' == etudiant.id|stringformat:'i' %}selected{% endif %}>
+                                        {{ etudiant.prenom }} {{ etudiant.nom }} ({{ etudiant.classe.nom if etudiant.classe else 'Pas de classe' }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.etudiant.errors %}
+                                <div class="invalid-feedback">{{ form.etudiant.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_matiere" class="form-label">Matiu00e8re <span class="text-danger">*</span></label>
+                            <select name="matiere" id="id_matiere" class="form-select {% if form.matiere.errors %}is-invalid{% endif %}" required>
+                                <option value="" {% if not form.matiere.value %}selected{% endif %}>-- Su00e9lectionner une matiu00e8re --</option>
+                                {% for matiere in form.fields.matiere.queryset %}
+                                    <option value="{{ matiere.id }}" {% if form.matiere.value|stringformat:'i' == matiere.id|stringformat:'i' %}selected{% endif %}>
+                                        {{ matiere.nom }} ({{ matiere.code }}) - Coef. {{ matiere.coefficient }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.matiere.errors %}
+                                <div class="invalid-feedback">{{ form.matiere.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_valeur" class="form-label">Note (sur 20) <span class="text-danger">*</span></label>
+                            <input type="number" name="valeur" id="id_valeur" class="form-control {% if form.valeur.errors %}is-invalid{% endif %}" value="{{ form.valeur.value|default:'' }}" min="0" max="20" step="0.25" required>
+                            {% if form.valeur.errors %}
+                                <div class="invalid-feedback">{{ form.valeur.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Du00e9tails de l'u00e9valuation</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_type_evaluation" class="form-label">Type d'u00e9valuation <span class="text-danger">*</span></label>
+                            <select name="type_evaluation" id="id_type_evaluation" class="form-select {% if form.type_evaluation.errors %}is-invalid{% endif %}" required>
+                                <option value="Examen" {% if form.type_evaluation.value == 'Examen' %}selected{% endif %}>Examen</option>
+                                <option value="Controle" {% if form.type_evaluation.value == 'Controle' %}selected{% endif %}>Controle</option>
+                                <option value="Devoir" {% if form.type_evaluation.value == 'Devoir' %}selected{% endif %}>Devoir</option>
+                                <option value="TP" {% if form.type_evaluation.value == 'TP' %}selected{% endif %}>TP</option>
+                                <option value="Oral" {% if form.type_evaluation.value == 'Oral' %}selected{% endif %}>Oral</option>
+                            </select>
+                            {% if form.type_evaluation.errors %}
+                                <div class="invalid-feedback">{{ form.type_evaluation.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_trimestre" class="form-label">Trimestre <span class="text-danger">*</span></label>
+                            <select name="trimestre" id="id_trimestre" class="form-select {% if form.trimestre.errors %}is-invalid{% endif %}" required>
+                                <option value="1" {% if form.trimestre.value == 1 %}selected{% endif %}>1er Trimestre</option>
+                                <option value="2" {% if form.trimestre.value == 2 %}selected{% endif %}>2u00e8me Trimestre</option>
+                                <option value="3" {% if form.trimestre.value == 3 %}selected{% endif %}>3u00e8me Trimestre</option>
+                            </select>
+                            {% if form.trimestre.errors %}
+                                <div class="invalid-feedback">{{ form.trimestre.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_date_evaluation" class="form-label">Date d'u00e9valuation <span class="text-danger">*</span></label>
+                            <input type="date" name="date_evaluation" id="id_date_evaluation" class="form-control {% if form.date_evaluation.errors %}is-invalid{% endif %}" value="{{ form.date_evaluation.value|date:'Y-m-d'|default:'' }}" required>
+                            {% if form.date_evaluation.errors %}
+                                <div class="invalid-feedback">{{ form.date_evaluation.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_commentaire" class="form-label">Commentaire</label>
+                            <textarea name="commentaire" id="id_commentaire" class="form-control {% if form.commentaire.errors %}is-invalid{% endif %}" rows="3">{{ form.commentaire.value|default:'' }}</textarea>
+                            {% if form.commentaire.errors %}
+                                <div class="invalid-feedback">{{ form.commentaire.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary" onclick="window.history.back();">Annuler</button>
+                    <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

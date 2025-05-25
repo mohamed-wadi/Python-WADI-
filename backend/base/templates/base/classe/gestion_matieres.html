@@ -1,0 +1,153 @@
+{% extends 'base/main.html' %}
+
+{% block title %}Gestion des Matières de la Classe {{ classe.nom }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestion des Matières - {{ classe.nom }}</h1>
+        <div>
+            <a href="http://127.0.0.1:8000/classes/{{ classe.id }}/" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour aux détails de la classe
+            </a>
+            <a href="http://127.0.0.1:8000/classes/" class="btn btn-info">
+                <i class="fas fa-list"></i> Liste des classes
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Matières déjà associées à la classe -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Matières de la classe {{ classe.nom }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if matieres_classe %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Nom</th>
+                                    <th>Professeur</th>
+                                    <th>Coeff.</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for matiere in matieres_classe %}
+                                <tr>
+                                    <td><span class="badge bg-info">{{ matiere.code }}</span></td>
+                                    <td>{{ matiere.nom }}</td>
+                                    <td>{% if matiere.professeur %}{{ matiere.professeur.nom }} {{ matiere.professeur.prenom }}{% else %}Non assigné{% endif %}</td>
+                                    <td>{{ matiere.coefficient }}</td>
+                                    <td>
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="supprimer">
+                                            <input type="hidden" name="matiere_id" value="{{ matiere.id }}">
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir retirer cette matière de la classe ?')">
+                                                <i class="fas fa-minus-circle"></i> Retirer
+                                            </button>
+                                        </form>
+                                        <a href="http://127.0.0.1:8000/matieres/{{ matiere.id }}/" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Aucune matière n'est associée à cette classe.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white">
+                    <span class="badge bg-primary">{{ matieres_classe.count }} matière(s)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matières disponibles à ajouter -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Matières disponibles</h5>
+                </div>
+                <div class="card-body">
+                    {% if matieres_disponibles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Nom</th>
+                                    <th>Professeur</th>
+                                    <th>Coeff.</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for matiere in matieres_disponibles %}
+                                <tr>
+                                    <td><span class="badge bg-info">{{ matiere.code }}</span></td>
+                                    <td>{{ matiere.nom }}</td>
+                                    <td>{% if matiere.professeur %}{{ matiere.professeur.nom }} {{ matiere.professeur.prenom }}{% else %}Non assigné{% endif %}</td>
+                                    <td>{{ matiere.coefficient }}</td>
+                                    <td>
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="ajouter">
+                                            <input type="hidden" name="matiere_id" value="{{ matiere.id }}">
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-plus-circle"></i> Ajouter
+                                            </button>
+                                        </form>
+                                        <a href="http://127.0.0.1:8000/matieres/{{ matiere.id }}/" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Toutes les matières sont déjà associées à cette classe.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white">
+                    <span class="badge bg-success">{{ matieres_disponibles.count }} matière(s) disponible(s)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="http://127.0.0.1:8000/matieres/ajouter/" class="btn btn-lg btn-outline-primary">
+                <i class="fas fa-plus-circle"></i> Créer une nouvelle matière
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

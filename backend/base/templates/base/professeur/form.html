@@ -1,0 +1,94 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ title }}</h1>
+        <a href="{% if object %}{% url 'base:professeur-detail' object.id %}{% else %}{% url 'base:professeur-list' %}{% endif %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                {% if object %}
+                    <i class="fas fa-edit"></i> Modifier les informations du professeur
+                {% else %}
+                    <i class="fas fa-plus-circle"></i> Ajouter un nouveau professeur
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations personnelles</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" name="nom" id="id_nom" class="form-control {% if form.nom.errors %}is-invalid{% endif %}" value="{{ form.nom.value|default:'' }}" required>
+                            {% if form.nom.errors %}
+                                <div class="invalid-feedback">{{ form.nom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_prenom" class="form-label">Pru00e9nom <span class="text-danger">*</span></label>
+                            <input type="text" name="prenom" id="id_prenom" class="form-control {% if form.prenom.errors %}is-invalid{% endif %}" value="{{ form.prenom.value|default:'' }}" required>
+                            {% if form.prenom.errors %}
+                                <div class="invalid-feedback">{{ form.prenom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_specialite" class="form-label">Spu00e9cialitu00e9 <span class="text-danger">*</span></label>
+                            <input type="text" name="specialite" id="id_specialite" class="form-control {% if form.specialite.errors %}is-invalid{% endif %}" value="{{ form.specialite.value|default:'' }}" required>
+                            {% if form.specialite.errors %}
+                                <div class="invalid-feedback">{{ form.specialite.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations professionnelles</h5>
+                        
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" id="id_email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" value="{{ form.email.value|default:'' }}" required>
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_telephone" class="form-label">Tu00e9lu00e9phone</label>
+                            <input type="tel" name="telephone" id="id_telephone" class="form-control {% if form.telephone.errors %}is-invalid{% endif %}" value="{{ form.telephone.value|default:'' }}">
+                            {% if form.telephone.errors %}
+                                <div class="invalid-feedback">{{ form.telephone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_date_embauche" class="form-label">Date d'embauche <span class="text-danger">*</span></label>
+                            <input type="date" name="date_embauche" id="id_date_embauche" class="form-control {% if form.date_embauche.errors %}is-invalid{% endif %}" value="{{ form.date_embauche.value|date:'Y-m-d'|default:'' }}" required>
+                            {% if form.date_embauche.errors %}
+                                <div class="invalid-feedback">{{ form.date_embauche.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary" onclick="window.history.back();">Annuler</button>
+                    <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

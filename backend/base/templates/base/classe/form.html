@@ -1,0 +1,62 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ title }}</h1>
+        <a href="{% url 'base:classe-list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                {% if object %}
+                    <i class="fas fa-edit"></i> Modifier les informations de la classe
+                {% else %}
+                    <i class="fas fa-plus-circle"></i> Ajouter une nouvelle classe
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="id_nom" class="form-label">Nom de la classe <span class="text-danger">*</span></label>
+                    <input type="text" name="nom" id="id_nom" class="form-control {% if form.nom.errors %}is-invalid{% endif %}" value="{{ form.nom.value|default:'' }}" required>
+                    {% if form.nom.errors %}
+                        <div class="invalid-feedback">{{ form.nom.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_niveau" class="form-label">Niveau <span class="text-danger">*</span></label>
+                    <input type="text" name="niveau" id="id_niveau" class="form-control {% if form.niveau.errors %}is-invalid{% endif %}" value="{{ form.niveau.value|default:'' }}" required>
+                    {% if form.niveau.errors %}
+                        <div class="invalid-feedback">{{ form.niveau.errors.0 }}</div>
+                    {% endif %}
+                    <div class="form-text">Exemple: Primaire, Collège, Lycée, etc.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_annee_scolaire" class="form-label">Année scolaire <span class="text-danger">*</span></label>
+                    <input type="text" name="annee_scolaire" id="id_annee_scolaire" class="form-control {% if form.annee_scolaire.errors %}is-invalid{% endif %}" value="{{ form.annee_scolaire.value|default:'2024-2025' }}" required>
+                    {% if form.annee_scolaire.errors %}
+                        <div class="invalid-feedback">{{ form.annee_scolaire.errors.0 }}</div>
+                    {% endif %}
+                    <div class="form-text">Format: 2024-2025</div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary" onclick="window.history.back();">Annuler</button>
+                    <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

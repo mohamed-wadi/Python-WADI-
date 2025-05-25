@@ -1,0 +1,161 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Saisie des notes par classe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Saisie des notes par classe</h1>
+        <a href="{% url 'base:note-list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour u00e0 la liste
+        </a>
+    </div>
+
+    <!-- Su00e9lection de la classe, matiu00e8re et trimestre -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter"></i> Su00e9lection des critu00e8res
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="classe" class="form-label">Classe <span class="text-danger">*</span></label>
+                    <select name="classe" id="classe" class="form-select" required>
+                        <option value="">-- Su00e9lectionner une classe --</option>
+                        {% for classe in classes %}
+                            <option value="{{ classe.id }}" {% if form.classe == classe.id|stringformat:'i' %}selected{% endif %}>
+                                {{ classe.nom }} - {{ classe.niveau }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="matiere" class="form-label">Matiu00e8re <span class="text-danger">*</span></label>
+                    <select name="matiere" id="matiere" class="form-select" required>
+                        <option value="">-- Su00e9lectionner une matiu00e8re --</option>
+                        {% for matiere in matieres %}
+                            <option value="{{ matiere.id }}" {% if form.matiere == matiere.id|stringformat:'i' %}selected{% endif %}>
+                                {{ matiere.nom }} ({{ matiere.code }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="trimestre" class="form-label">Trimestre <span class="text-danger">*</span></label>
+                    <select name="trimestre" id="trimestre" class="form-select" required>
+                        <option value="">-- Su00e9lectionner --</option>
+                        <option value="1" {% if form.trimestre == '1' %}selected{% endif %}>1er Trimestre</option>
+                        <option value="2" {% if form.trimestre == '2' %}selected{% endif %}>2u00e8me Trimestre</option>
+                        <option value="3" {% if form.trimestre == '3' %}selected{% endif %}>3u00e8me Trimestre</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Afficher
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if selected_classe and selected_matiere and selected_trimestre %}
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    Notes de {{ selected_matiere.nom }} - {{ selected_classe.nom }} - 
+                    {% if selected_trimestre == '1' %}1er Trimestre{% elif selected_trimestre == '2' %}2u00e8me Trimestre{% else %}3u00e8me Trimestre{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if etudiants %}
+                    <form method="post" class="mb-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="classe" value="{{ form.classe }}">
+                        <input type="hidden" name="matiere" value="{{ form.matiere }}">
+                        <input type="hidden" name="trimestre" value="{{ form.trimestre }}">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="type_evaluation" class="form-label">Type d'u00e9valuation <span class="text-danger">*</span></label>
+                                <select name="type_evaluation" id="type_evaluation" class="form-select" required>
+                                    <option value="Examen">Examen</option>
+                                    <option value="Controle">Controle</option>
+                                    <option value="Devoir">Devoir</option>
+                                    <option value="TP">TP</option>
+                                    <option value="Oral">Oral</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="date_evaluation" class="form-label">Date d'u00e9valuation <span class="text-danger">*</span></label>
+                                <input type="date" name="date_evaluation" id="date_evaluation" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>N°</th>
+                                        <th>u00c9tudiant</th>
+                                        <th>Notes existantes</th>
+                                        <th>Nouvelle note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for etudiant in etudiants %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>
+                                                <input type="hidden" name="etudiant_id" value="{{ etudiant.id }}">
+                                                {{ etudiant.prenom }} {{ etudiant.nom }}
+                                            </td>
+                                            <td>
+                                                {% if etudiant.notes %}
+                                                    {% for note in etudiant.notes %}
+                                                        <span class="badge {% if note.valeur >= 10 %}bg-success{% else %}bg-danger{% endif %} p-2 me-1">
+                                                            {{ note.valeur }}/20 ({{ note.type_evaluation }})
+                                                        </span>
+                                                    {% endfor %}
+                                                    {% if etudiant.moyenne %}
+                                                        <div class="mt-1">
+                                                            <strong>Moyenne: </strong>
+                                                            <span class="badge {% if etudiant.moyenne >= 10 %}bg-success{% else %}bg-danger{% endif %} p-2">
+                                                                {{ etudiant.moyenne|floatformat:2 }}/20
+                                                            </span>
+                                                        </div>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">Aucune note</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <input type="number" name="valeur" class="form-control" min="0" max="20" step="0.25" placeholder="/20">
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Enregistrer les notes
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Aucun u00e9tudiant trouvu00e9 dans cette classe.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Su00e9lectionnez une classe, une matiu00e8re et un trimestre pour afficher les u00e9tudiants et saisir les notes.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

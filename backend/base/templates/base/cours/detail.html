@@ -1,0 +1,122 @@
+{% extends 'base/main.html' %}
+
+{% block title %}Du00e9tail du Cours{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Du00e9tail du Cours</h1>
+        <div>
+            <a href="{% url 'cours-list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour u00e0 la liste
+            </a>
+            <a href="{% url 'cours-update' cours.id %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Modifier
+            </a>
+            <a href="{% url 'cours-delete' cours.id %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Supprimer
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Informations du cours -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Informations du Cours</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Matiu00e8re</h6>
+                            <p><span class="badge bg-info">{{ cours.matiere.code }}</span> {{ cours.matiere.nom }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Coefficient</h6>
+                            <p>{{ cours.matiere.coefficient }}</p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Professeur</h6>
+                            <p>{{ cours.professeur.nom }} {{ cours.professeur.prenom }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Classe</h6>
+                            <p>{{ cours.classe.nom }} ({{ cours.classe.niveau }})</p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Jour</h6>
+                            <p>{{ cours.jour }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Horaire</h6>
+                            <p>{{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }} ({{ cours.duree|floatformat:0 }} min)</p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Salle</h6>
+                            <p>{{ cours.salle }}</p>
+                        </div>
+                    </div>
+                    {% if cours.description %}
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-1">Description</h6>
+                            <p>{{ cours.description|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations additionnelles -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Informations du Professeur</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> {{ cours.professeur.email }}</p>
+                    <p><strong>Tu00e9lu00e9phone:</strong> {{ cours.professeur.telephone }}</p>
+                    <p><strong>Spu00e9cialitu00e9:</strong> {{ cours.professeur.specialite }}</p>
+                    <a href="{% url 'professeur-detail' cours.professeur.id %}" class="btn btn-sm btn-outline-info w-100">
+                        <i class="fas fa-user"></i> Voir le profil du professeur
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Informations de la Classe</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Niveau:</strong> {{ cours.classe.niveau }}</p>
+                    <p><strong>Annu00e9e scolaire:</strong> {{ cours.classe.annee_scolaire }}</p>
+                    <p><strong>Nombre d'u00e9tudiants:</strong> {{ cours.classe.nombre_etudiants }}</p>
+                    <a href="{% url 'classe-detail' cours.classe.id %}" class="btn btn-sm btn-outline-info w-100">
+                        <i class="fas fa-users"></i> Voir la classe
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

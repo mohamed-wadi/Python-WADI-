@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bulletin - {{ bulletin.etudiant.prenom }} {{ bulletin.etudiant.nom }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .header p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .school-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .student-info {
+            width: 100%;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+        }
+        .student-info td {
+            padding: 5px;
+            border: 1px solid #ddd;
+        }
+        .student-info .label {
+            font-weight: bold;
+            width: 25%;
+            background-color: #f9f9f9;
+        }
+        .grades-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .grades-table th, .grades-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .grades-table th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            margin: 20px 0;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .summary-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        .summary-table .label {
+            font-weight: bold;
+            width: 40%;
+            background-color: #f9f9f9;
+        }
+        .decision {
+            padding: 10px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        .signature {
+            margin-top: 40px;
+            text-align: right;
+        }
+        .failed {
+            color: #d9534f;
+        }
+        .passed {
+            color: #5cb85c;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="school-info">
+            <h1>BULLETIN SCOLAIRE</h1>
+            <p>ÉCOLE SECONDAIRE EXCELLENCE</p>
+            <p>Année Scolaire {{ bulletin.annee_scolaire }}</p>
+            <p>
+                {% if bulletin.trimestre == 1 %}1er Trimestre{% elif bulletin.trimestre == 2 %}2ème Trimestre{% else %}3ème Trimestre{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <table class="student-info">
+        <tr>
+            <td class="label">Nom et prénom</td>
+            <td>{{ bulletin.etudiant.prenom }} {{ bulletin.etudiant.nom }}</td>
+            <td class="label">Matricule</td>
+            <td>{{ bulletin.etudiant.numero_matricule }}</td>
+        </tr>
+        <tr>
+            <td class="label">Classe</td>
+            <td>{{ bulletin.etudiant.classe.nom }}</td>
+            <td class="label">Effectif</td>
+            <td>{{ bulletin.total_eleves }} élèves</td>
+        </tr>
+        <tr>
+            <td class="label">Date de naissance</td>
+            <td>{{ bulletin.etudiant.date_naissance|date:"d/m/Y" }}</td>
+            <td class="label">Date d'émission</td>
+            <td>{{ bulletin.date_generation|date:"d/m/Y" }}</td>
+        </tr>
+    </table>
+
+    <h3>Résultats par matière</h3>
+    <table class="grades-table">
+        <tr>
+            <th>Matière</th>
+            <th>Coef</th>
+            <th>Moyenne</th>
+            <th>Rang</th>
+            <th>Moyenne de la classe</th>
+            <th>Appréciation</th>
+        </tr>
+        {% for resultat in resultats_matieres %}
+            <tr>
+                <td style="text-align: left;">
+                    <strong>{{ resultat.matiere.nom }}</strong><br>
+                    <small>{{ resultat.matiere.professeur.prenom }} {{ resultat.matiere.professeur.nom }}</small>
+                </td>
+                <td>{{ resultat.matiere.coefficient }}</td>
+                <td {% if resultat.moyenne < 10 %}class="failed"{% else %}class="passed"{% endif %}>
+                    {{ resultat.moyenne|floatformat:2 }}/20
+                </td>
+                <td>{{ resultat.rang }}/{{ bulletin.total_eleves }}</td>
+                <td>{{ resultat.moyenne_classe|floatformat:2 }}/20</td>
+                <td>
+                    {% if resultat.moyenne < 8 %}
+                        Insuffisant
+                    {% elif resultat.moyenne < 10 %}
+                        Médiocre
+                    {% elif resultat.moyenne < 12 %}
+                        Passable
+                    {% elif resultat.moyenne < 14 %}
+                        Assez bien
+                    {% elif resultat.moyenne < 16 %}
+                        Bien
+                    {% else %}
+                        Très bien
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    <div class="summary">
+        <h3>Synthèse des résultats</h3>
+        <table class="summary-table">
+            <tr>
+                <td class="label">Moyenne générale</td>
+                <td {% if bulletin.moyenne_generale < 10 %}class="failed"{% else %}class="passed"{% endif %}>
+                    <strong>{{ bulletin.moyenne_generale|floatformat:2 }}/20</strong>
+                </td>
+                <td class="label">Rang</td>
+                <td><strong>{{ bulletin.rang }}/{{ bulletin.total_eleves }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Absences</td>
+                <td>{{ absences_count }} heure(s)</td>
+                <td class="label">Retards</td>
+                <td>{{ retards_count }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="decision">
+        <h3>Appréciation et décision</h3>
+        <p><strong>Appréciation générale :</strong> {{ bulletin.appreciation|default:"" }}</p>
+        <p><strong>Décision :</strong> 
+            {% if bulletin.trimestre != 3 %}
+                {% if bulletin.moyenne_generale >= 10 %}
+                    Trimestre validé
+                {% else %}
+                    En difficulté - Un suivi est recommandé
+                {% endif %}
+            {% else %}
+                {% if bulletin.moyenne_generale >= 10 %}
+                    Passage en classe supérieure
+                {% else %}
+                    Redoublement conseillé
+                {% endif %}
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="signature">
+        <p>Le Directeur,</p>
+        <br><br>
+        <p>_______________________</p>
+    </div>
+</body>
+</html>

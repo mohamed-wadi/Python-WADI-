@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Scolaire - Accueil</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        header {
+            background-color: #3498db;
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        nav {
+            background-color: #2980b9;
+            padding: 0.5rem 0;
+        }
+        nav ul {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        nav li {
+            margin: 0 1rem;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 0.5rem 1rem;
+            border-radius: 3px;
+            transition: background 0.3s;
+        }
+        nav a:hover {
+            background-color: #1c638d;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .hero {
+            background-color: white;
+            border-radius: 5px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .feature-card {
+            background-color: white;
+            border-radius: 5px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .feature-card h3 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        footer {
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 1rem 0;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Système de Gestion Scolaire</h1>
+        </div>
+    </header>
+    
+    <nav>
+        <ul>
+            <li><a href="/">Accueil</a></li>
+            <li><a href="/etudiants/">Étudiants</a></li>
+            <li><a href="/professeurs/">Professeurs</a></li>
+            <li><a href="/cours/">Cours</a></li>
+            <li><a href="/notes/">Notes</a></li>
+            <li><a href="/bulletins/">Bulletins</a></li>
+            <li><a href="/statistiques/">Statistiques</a></li>
+            <li><a href="/admin/">Administration</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="hero">
+            <h2>Bienvenue sur le Système de Gestion Scolaire</h2>
+            <p>Une solution complète pour la gestion des étudiants, des enseignants, des notes et des bulletins scolaires.</p>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>Gestion des Étudiants</h3>
+                <p>Inscriptions, informations personnelles, et suivi académique des étudiants.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Gestion des Professeurs</h3>
+                <p>Gestion des enseignants, leurs spécialités et matières enseignées.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Gestion des Cours</h3>
+                <p>Organisation des cours, attribution des professeurs et planification.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Notes et Évaluations</h3>
+                <p>Saisie et consultation des notes par matière et trimestre.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Bulletins Scolaires</h3>
+                <p>Génération et impression des bulletins trimestriels au format PDF.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Statistiques et Rapports</h3>
+                <p>Analyses des performances et statistiques par classe, matière et étudiant.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Système de Gestion Scolaire - Tous droits réservés</p>
+        </div>
+    </footer>
+</body>
+</html>

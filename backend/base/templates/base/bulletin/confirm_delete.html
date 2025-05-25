@@ -1,0 +1,48 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Supprimer le bulletin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Confirmation de suppression
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="my-4">
+                        <i class="fas fa-file-pdf fa-5x text-danger mb-4"></i>
+                        
+                        <h4>Êtes-vous sûr de vouloir supprimer ce bulletin :</h4>
+                        <p class="h5 mb-4">
+                            {{ bulletin.etudiant.prenom }} {{ bulletin.etudiant.nom }} - 
+                            {% if bulletin.trimestre == 1 %}1er Trimestre{% elif bulletin.trimestre == 2 %}2ème Trimestre{% else %}3ème Trimestre{% endif %} 
+                            {{ bulletin.annee_scolaire }}
+                        </p>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Attention :</strong> Cette action est irréversible. Toutes les informations associées à ce bulletin seront perdues.
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="d-inline-block">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'base:bulletin-list' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash me-2"></i> Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

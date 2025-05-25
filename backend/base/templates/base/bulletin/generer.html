@@ -1,0 +1,177 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Générer des bulletins{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Génération des bulletins</h1>
+        <a href="{% url 'base:bulletin-list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-file-alt"></i> Générer des bulletins
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_classe" class="form-label">Classe <span class="text-danger">*</span></label>
+                            <select name="classe" id="id_classe" class="form-select {% if form.classe.errors %}is-invalid{% endif %}" required>
+                                <option value="" {% if not form.classe.value %}selected{% endif %}>-- Sélectionner une classe --</option>
+                                {% for classe in classes %}
+                                    <option value="{{ classe.id }}" {% if form.classe.value|stringformat:'i' == classe.id|stringformat:'i' %}selected{% endif %}>
+                                        {{ classe.nom }} - {{ classe.niveau }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.classe.errors %}
+                                <div class="invalid-feedback">{{ form.classe.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Sélectionnez la classe pour laquelle vous souhaitez générer les bulletins</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_trimestre" class="form-label">Trimestre <span class="text-danger">*</span></label>
+                            <select name="trimestre" id="id_trimestre" class="form-select {% if form.trimestre.errors %}is-invalid{% endif %}" required>
+                                <option value="" {% if not form.trimestre.value %}selected{% endif %}>-- Sélectionner un trimestre --</option>
+                                <option value="1" {% if form.trimestre.value == '1' %}selected{% endif %}>1er Trimestre</option>
+                                <option value="2" {% if form.trimestre.value == '2' %}selected{% endif %}>2ème Trimestre</option>
+                                <option value="3" {% if form.trimestre.value == '3' %}selected{% endif %}>3ème Trimestre</option>
+                            </select>
+                            {% if form.trimestre.errors %}
+                                <div class="invalid-feedback">{{ form.trimestre.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_annee_scolaire" class="form-label">Année scolaire <span class="text-danger">*</span></label>
+                            <input type="text" name="annee_scolaire" id="id_annee_scolaire" class="form-control {% if form.annee_scolaire.errors %}is-invalid{% endif %}" value="{{ form.annee_scolaire.value|default:annee_actuelle }}" required>
+                            {% if form.annee_scolaire.errors %}
+                                <div class="invalid-feedback">{{ form.annee_scolaire.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Format: 2023-2024</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Type de génération</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type_generation" id="type_generation_classe" value="classe" {% if form.type_generation.value == 'classe' or not form.type_generation.value %}checked{% endif %}>
+                                <label class="form-check-label" for="type_generation_classe">
+                                    Générer pour toute la classe
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type_generation" id="type_generation_etudiant" value="etudiant" {% if form.type_generation.value == 'etudiant' %}checked{% endif %}>
+                                <label class="form-check-label" for="type_generation_etudiant">
+                                    Générer pour un étudiant spécifique
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3" id="etudiant_selector" style="display: {% if form.type_generation.value == 'etudiant' %}block{% else %}none{% endif %};">
+                            <label for="id_etudiant" class="form-label">Étudiant <span class="text-danger">*</span></label>
+                            <select name="etudiant" id="id_etudiant" class="form-select {% if form.etudiant.errors %}is-invalid{% endif %}" {% if form.type_generation.value == 'etudiant' %}required{% endif %}>
+                                <option value="" {% if not form.etudiant.value %}selected{% endif %}>-- Sélectionner un étudiant --</option>
+                                {% for etudiant in etudiants %}
+                                    <option value="{{ etudiant.id }}" {% if form.etudiant.value|stringformat:'i' == etudiant.id|stringformat:'i' %}selected{% endif %}>
+                                        {{ etudiant.prenom }} {{ etudiant.nom }} ({{ etudiant.classe.nom }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.etudiant.errors %}
+                                <div class="invalid-feedback">{{ form.etudiant.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_date_emission" class="form-label">Date d'émission <span class="text-danger">*</span></label>
+                            <input type="date" name="date_emission" id="id_date_emission" class="form-control {% if form.date_emission.errors %}is-invalid{% endif %}" value="{{ form.date_emission.value|date:'Y-m-d'|default:today }}" required>
+                            {% if form.date_emission.errors %}
+                                <div class="invalid-feedback">{{ form.date_emission.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_appreciation" class="form-label">Appréciation générale</label>
+                            <textarea name="appreciation" id="id_appreciation" class="form-control {% if form.appreciation.errors %}is-invalid{% endif %}" rows="3">{{ form.appreciation.value|default:'' }}</textarea>
+                            {% if form.appreciation.errors %}
+                                <div class="invalid-feedback">{{ form.appreciation.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Cette appréciation sera appliquée à tous les bulletins générés. Vous pourrez la personnaliser ultérieurement pour chaque élève.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> La génération des bulletins calculera automatiquement les moyennes, les rangs et les statistiques de la classe en fonction des notes saisies dans le système.
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary" onclick="window.history.back();">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-cogs"></i> Générer les bulletins
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeClasse = document.getElementById('type_generation_classe');
+        const typeEtudiant = document.getElementById('type_generation_etudiant');
+        const etudiantSelector = document.getElementById('etudiant_selector');
+        const etudiantSelect = document.getElementById('id_etudiant');
+        
+        function updateEtudiantSelector() {
+            if (typeEtudiant.checked) {
+                etudiantSelector.style.display = 'block';
+                etudiantSelect.required = true;
+            } else {
+                etudiantSelector.style.display = 'none';
+                etudiantSelect.required = false;
+            }
+        }
+        
+        typeClasse.addEventListener('change', updateEtudiantSelector);
+        typeEtudiant.addEventListener('change', updateEtudiantSelector);
+        
+        // Au chargement de la page
+        updateEtudiantSelector();
+        
+        // Mise à jour des étudiants en fonction de la classe sélectionnée
+        const classeSelect = document.getElementById('id_classe');
+        classeSelect.addEventListener('change', function() {
+            const classeId = this.value;
+            if (classeId) {
+                // Récupérer les étudiants de la classe via AJAX
+                fetch(`/etudiants-par-classe/?classe=${classeId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        etudiantSelect.innerHTML = '<option value="">-- Sélectionner un étudiant --</option>';
+                        data.etudiants.forEach(etudiant => {
+                            const option = document.createElement('option');
+                            option.value = etudiant.id;
+                            option.textContent = `${etudiant.prenom} ${etudiant.nom}`;
+                            etudiantSelect.appendChild(option);
+                        });
+                    });
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

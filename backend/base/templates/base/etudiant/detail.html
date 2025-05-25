@@ -1,0 +1,338 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Fiche u00e9tudiant - {{ etudiant.prenom }} {{ etudiant.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Fiche u00e9tudiant</h1>
+        <div>
+            <a href="{% url 'base:etudiant-list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+            <a href="{% url 'base:etudiant-update' etudiant.id %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Modifier
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations personnelles -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user-circle"></i> Informations personnelles
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
+                            <i class="fas fa-user-graduate fa-4x text-primary"></i>
+                        </div>
+                        <h4 class="mt-3">{{ etudiant.prenom }} {{ etudiant.nom }}</h4>
+                        <p class="badge bg-info">{{ etudiant.numero_matricule }}</p>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-birthday-cake me-2 text-muted"></i> Date de naissance:</span>
+                            <span class="text-muted">{{ etudiant.date_naissance }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-venus-mars me-2 text-muted"></i> Sexe:</span>
+                            <span class="text-muted">
+                                {% if etudiant.sexe == 'M' %}Masculin{% else %}Fu00e9minin{% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-graduation-cap me-2 text-muted"></i> Classe:</span>
+                            <span class="text-muted">
+                                {% if etudiant.classe %}{{ etudiant.classe.nom }}{% else %}Non assignu00e9{% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-calendar-alt me-2 text-muted"></i> Date d'inscription:</span>
+                            <span class="text-muted">{{ etudiant.date_inscription }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-address-card"></i> Contact
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="fas fa-envelope me-2 text-muted"></i> {{ etudiant.email }}
+                        </li>
+                        {% if etudiant.telephone %}
+                        <li class="list-group-item">
+                            <i class="fas fa-phone me-2 text-muted"></i> {{ etudiant.telephone }}
+                        </li>
+                        {% endif %}
+                        {% if etudiant.adresse %}
+                        <li class="list-group-item">
+                            <i class="fas fa-map-marker-alt me-2 text-muted"></i> {{ etudiant.adresse }}
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ru00e9sultats et absences -->
+        <div class="col-md-8">
+            <!-- Onglets -->
+            <ul class="nav nav-tabs mb-4" id="studentTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                        <i class="fas fa-sticky-note me-1"></i> Notes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bulletins-tab" data-bs-toggle="tab" data-bs-target="#bulletins" type="button" role="tab">
+                        <i class="fas fa-file-alt me-1"></i> Bulletins
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="absences-tab" data-bs-toggle="tab" data-bs-target="#absences" type="button" role="tab">
+                        <i class="fas fa-calendar-times me-1"></i> Absences
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Contenu des onglets -->
+            <div class="tab-content" id="studentTabContent">
+                <!-- Onglet Notes -->
+                <div class="tab-pane fade show active" id="notes" role="tabpanel">
+                    {% if notes %}
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Derniu00e8res notes</h5>
+                                    <a href="#" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus"></i> Ajouter une note
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Matiu00e8re</th>
+                                                <th>Trimestre</th>
+                                                <th>Type</th>
+                                                <th>Note</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for note in notes %}
+                                            <tr>
+                                                <td>{{ note.matiere.nom }}</td>
+                                                <td>{{ note.get_trimestre_display }}</td>
+                                                <td>{{ note.type_evaluation }}</td>
+                                                <td>
+                                                    <span class="badge {% if note.valeur >= 10 %}bg-success{% else %}bg-danger{% endif %} p-2">
+                                                        {{ note.valeur }}/20
+                                                    </span>
+                                                </td>
+                                                <td>{{ note.date_evaluation }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Moyennes par matiu00e8re -->
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Moyennes par matiu00e8re</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    {% for m in moyennes_par_matiere %}
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card h-100">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title">{{ m.matiere.nom }}</h5>
+                                                <p class="display-4 {% if m.moyenne >= 10 %}text-success{% else %}text-danger{% endif %}">
+                                                    {{ m.moyenne|floatformat:2 }}
+                                                </p>
+                                                <p class="text-muted">Coefficient: {{ m.matiere.coefficient }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Aucune note enregistru00e9e pour cet u00e9tudiant.
+                        </div>
+                        <a href="#" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Ajouter une note
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Onglet Bulletins -->
+                <div class="tab-pane fade" id="bulletins" role="tabpanel">
+                    {% if bulletins %}
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Bulletins scolaires</h5>
+                                    <a href="#" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus"></i> Gu00e9nu00e9rer un bulletin
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Trimestre</th>
+                                                <th>Annu00e9e scolaire</th>
+                                                <th>Moyenne</th>
+                                                <th>Rang</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for bulletin in bulletins %}
+                                            <tr>
+                                                <td>{{ bulletin.get_trimestre_display }}</td>
+                                                <td>{{ bulletin.annee_scolaire }}</td>
+                                                <td>
+                                                    {% if bulletin.moyenne_generale %}
+                                                    <span class="badge {% if bulletin.moyenne_generale >= 10 %}bg-success{% else %}bg-danger{% endif %} p-2">
+                                                        {{ bulletin.moyenne_generale|floatformat:2 }}/20
+                                                    </span>
+                                                    {% else %}
+                                                    <span class="badge bg-secondary p-2">Non calculu00e9e</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if bulletin.rang %}
+                                                    {{ bulletin.rang }}/{{ etudiant.classe.nombre_etudiants }}
+                                                    {% else %}
+                                                    <span class="text-muted">Non calculu00e9</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="#" class="btn btn-sm btn-primary" title="Voir">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="#" class="btn btn-sm btn-success" title="Tu00e9lu00e9charger PDF">
+                                                            <i class="fas fa-file-pdf"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Aucun bulletin scolaire n'a encore u00e9tu00e9 gu00e9nu00e9ru00e9 pour cet u00e9tudiant.
+                        </div>
+                        <a href="#" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Gu00e9nu00e9rer un bulletin
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Onglet Absences -->
+                <div class="tab-pane fade" id="absences" role="tabpanel">
+                    {% if absences %}
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Historique des absences</h5>
+                                    <a href="#" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus"></i> Ajouter une absence
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Pu00e9riode</th>
+                                                <th>Duru00e9e</th>
+                                                <th>Statut</th>
+                                                <th>Motif</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for absence in absences %}
+                                            <tr>
+                                                <td>
+                                                    {{ absence.date_debut }} 
+                                                    {% if absence.date_debut != absence.date_fin %}
+                                                    au {{ absence.date_fin }}
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ absence.duree }} jour(s)</td>
+                                                <td>
+                                                    {% if absence.justifiee %}
+                                                    <span class="badge bg-success">Justifiu00e9e</span>
+                                                    {% else %}
+                                                    <span class="badge bg-danger">Non justifiu00e9e</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if absence.motif %}
+                                                    {{ absence.motif|truncatechars:30 }}
+                                                    {% else %}
+                                                    <span class="text-muted">Aucun motif</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="#" class="btn btn-sm btn-warning" title="Modifier">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <a href="#" class="btn btn-sm btn-danger" title="Supprimer">
+                                                            <i class="fas fa-trash"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Aucune absence enregistru00e9e pour cet u00e9tudiant.
+                        </div>
+                        <a href="#" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Ajouter une absence
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

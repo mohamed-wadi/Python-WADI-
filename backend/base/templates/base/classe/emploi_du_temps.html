@@ -1,0 +1,203 @@
+{% extends 'base/main.html' %}
+
+{% block title %}Emploi du Temps - {{ classe.nom }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Emploi du Temps - {{ classe.nom }}</h1>
+        <div>
+            <a href="http://127.0.0.1:8000/classes/{{ classe.id }}/" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour aux détails de la classe
+            </a>
+            <a href="http://127.0.0.1:8000/classes/" class="btn btn-info">
+                <i class="fas fa-list"></i> Liste des classes
+            </a>
+        </div>
+    </div>
+
+    <!-- Informations de la classe -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Informations de la classe</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <p><strong>Nom:</strong> {{ classe.nom }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>Niveau:</strong> {{ classe.niveau }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>Année scolaire:</strong> {{ classe.annee_scolaire }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emploi du temps -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Emploi du temps hebdomadaire</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Horaires</th>
+                            {% for jour in jours %}
+                            <th>{{ jour }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for heure in heures %}
+                        <tr>
+                            <th class="table-light">{{ heure }}</th>
+                            {% for jour in jours %}
+                            <td class="align-middle text-center" id="cell-{{ jour }}-{{ heure }}">
+                                <!-- Cette cellule sera remplie par JavaScript -->
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire pour programmer un cours -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="card-title mb-0">Programmer un nouveau cours</h5>
+        </div>
+        <div class="card-body">
+            <form id="programmation-cours-form">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="matiere" class="form-label">Matière</label>
+                        <select id="matiere" name="matiere" class="form-select" required>
+                            <option value="">--Sélectionner une matière--</option>
+                            {% for matiere in matieres %}
+                            <option value="{{ matiere.id }}" data-prof="{% if matiere.professeur %}{{ matiere.professeur.nom }} {{ matiere.professeur.prenom }}{% else %}Non assigné{% endif %}">
+                                {{ matiere.nom }} ({{ matiere.code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="professeur-info" class="form-label">Professeur</label>
+                        <input type="text" id="professeur-info" class="form-control" readonly>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="jour" class="form-label">Jour</label>
+                        <select id="jour" name="jour" class="form-select" required>
+                            <option value="">--Sélectionner un jour--</option>
+                            {% for jour in jours %}
+                            <option value="{{ jour }}">{{ jour }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="heure" class="form-label">Créneau horaire</label>
+                        <select id="heure" name="heure" class="form-select" required>
+                            <option value="">--Sélectionner un créneau--</option>
+                            {% for heure in heures %}
+                            <option value="{{ heure }}">{{ heure }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="salle" class="form-label">Salle</label>
+                        <input type="text" id="salle" name="salle" class="form-control" required>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <button type="button" id="btn-ajouter-cours" class="btn btn-success">
+                        <i class="fas fa-plus-circle"></i> Ajouter à l'emploi du temps
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="card">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="card-title mb-0">Légende</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for matiere in matieres %}
+                <div class="col-md-4 mb-2">
+                    <span class="badge" style="background-color: {{ matiere.couleur|default:'#6c757d' }}">{{ matiere.nom }}</span>
+                    - <small>{{ matiere.code }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Couleurs pour différencier les matières
+        const couleurs = [
+            '#4285F4', '#EA4335', '#FBBC05', '#34A853', '#FF6D01', '#46BDC6',
+            '#7BAAF7', '#F6AEA9', '#FDE293', '#A8D7A1', '#FFBB80', '#A3DDE0'
+        ];
+        
+        // Assigner une couleur u00e0 chaque matière
+        const matieres = document.querySelectorAll('#matiere option');
+        matieres.forEach((matiere, index) => {
+            if (matiere.value) {
+                matiere.dataset.couleur = couleurs[index % couleurs.length];
+            }
+        });
+        
+        // Mettre à jour l'information du professeur quand une matière est sélectionnée
+        document.getElementById('matiere').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            document.getElementById('professeur-info').value = selectedOption.dataset.prof || 'Non assigné';
+        });
+        
+        // Ajouter un cours à l'emploi du temps
+        document.getElementById('btn-ajouter-cours').addEventListener('click', function() {
+            const matiereSelect = document.getElementById('matiere');
+            const jour = document.getElementById('jour').value;
+            const heure = document.getElementById('heure').value;
+            const salle = document.getElementById('salle').value;
+            
+            if (!matiereSelect.value || !jour || !heure || !salle) {
+                alert('Veuillez remplir tous les champs.');
+                return;
+            }
+            
+            const selectedOption = matiereSelect.options[matiereSelect.selectedIndex];
+            const matiereName = selectedOption.text;
+            const professeur = selectedOption.dataset.prof;
+            const couleur = selectedOption.dataset.couleur;
+            
+            const cell = document.getElementById(`cell-${jour}-${heure}`);
+            cell.innerHTML = `
+                <div class="p-2 text-white" style="background-color: ${couleur}; border-radius: 5px;">
+                    <strong>${matiereName}</strong><br>
+                    <small>${professeur}</small><br>
+                    <small>Salle: ${salle}</small>
+                </div>
+            `;
+            
+            // Ru00e9initialiser le formulaire
+            document.getElementById('programmation-cours-form').reset();
+            document.getElementById('professeur-info').value = '';
+        });
+    });
+</script>
+{% endblock %}

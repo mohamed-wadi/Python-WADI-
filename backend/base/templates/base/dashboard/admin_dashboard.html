@@ -1,0 +1,228 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Tableau de Bord Administrateur{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Tableau de bord administrateur</h1>
+    
+    <div class="row">
+        <!-- Statistiques générales -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Étudiants</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ nb_etudiants }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Professeurs</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ nb_professeurs }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Classes</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ nb_classes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-school fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Matières</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ nb_matieres }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-book fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions rapides -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="card-title mb-0">Actions administratives</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:etudiant-list' %}" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-user-graduate"></i> Gérer étudiants
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:professeur-list' %}" class="btn btn-success btn-lg w-100">
+                        <i class="fas fa-chalkboard-teacher"></i> Gérer professeurs
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:classe-list' %}" class="btn btn-info btn-lg w-100">
+                        <i class="fas fa-school"></i> Gérer classes
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:matiere-list' %}" class="btn btn-warning btn-lg text-white w-100">
+                        <i class="fas fa-book"></i> Gérer matières
+                    </a>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:note-list' %}" class="btn btn-secondary btn-lg w-100">
+                        <i class="fas fa-pen"></i> Gérer notes
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:bulletin-list' %}" class="btn btn-dark btn-lg w-100">
+                        <i class="fas fa-file-alt"></i> Gérer bulletins
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:bulletin-generer' %}" class="btn btn-danger btn-lg w-100">
+                        <i class="fas fa-cogs"></i> Générer bulletins
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'base:cours-list' %}" class="btn btn-light btn-lg w-100">
+                        <i class="fas fa-calendar-alt"></i> Gérer emploi du temps
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Répartition des étudiants par classe -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Répartition des étudiants par classe</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Classe</th>
+                                    <th>Niveau</th>
+                                    <th>Nombre d'étudiants</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for classe in repartition_classes %}
+                                <tr>
+                                    <td>{{ classe.classe.nom }}</td>
+                                    <td>{{ classe.classe.niveau }}</td>
+                                    <td>{{ classe.nb_etudiants }}</td>
+                                    <td>
+                                        <a href="{% url 'base:classe-detail' classe.classe.id %}" class="btn btn-sm btn-primary">Détails</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucune classe disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Répartition des matières par professeur -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Répartition des matières par professeur</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Professeur</th>
+                                    <th>Spécialité</th>
+                                    <th>Nombre de matières</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prof in repartition_matieres %}
+                                <tr>
+                                    <td>{{ prof.professeur.prenom }} {{ prof.professeur.nom }}</td>
+                                    <td>{{ prof.professeur.specialite }}</td>
+                                    <td>{{ prof.nb_matieres }}</td>
+                                    <td>
+                                        <a href="{% url 'base:professeur-detail' prof.professeur.id %}" class="btn btn-sm btn-success">Détails</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Aucun professeur disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liens rapides vers l'administration Django -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">Administration avancée</h5>
+        </div>
+        <div class="card-body">
+            <p>Utilisez l'interface d'administration Django pour des fonctionnalités avancées:</p>
+            <a href="/admin/" target="_blank" class="btn btn-danger">
+                <i class="fas fa-cogs"></i> Interface d'administration Django
+            </a>
+            <p class="mt-3">
+                <strong>Note:</strong> Cette interface nécessite des droits d'administration spécifiques.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %} 
