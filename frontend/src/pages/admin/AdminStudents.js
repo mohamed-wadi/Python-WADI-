@@ -30,18 +30,8 @@ import {
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 
-import { 
-  fetchEtudiants, 
-  fetchEtudiant, 
-  createEtudiant, 
-  updateEtudiant, 
-  deleteEtudiant,
-  fetchClasses 
-} from '../../utils/api';
-
+import { etudiantService, classeService } from '../../utils/apiService';
 import { NIVEAUX_INGENIEUR } from '../../utils/constants';
-import { STORAGE_KEYS, EVENTS, saveData, loadData, addItem, updateItem, deleteItem, getActiveItems } from '../../utils/localStorageManager';
-import EventBus from '../../utils/eventBus';
 
 const AdminStudents = () => {
   const [etudiants, setEtudiants] = useState([]);
@@ -74,97 +64,28 @@ const AdminStudents = () => {
 
   useEffect(() => {
     loadData();
-    
-    // Initialiser des données statiques pour les classes
-    setClasses([
-      { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
-      { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
-    ]);
   }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      // D'abord, essayer de charger les étudiants depuis le localStorage
-      const savedEtudiants = loadEtudiantsFromLocalStorage();
-      
-      // Si des étudiants existent dans localStorage, les utiliser
-      if (savedEtudiants && savedEtudiants.length > 0) {
-        console.log('Chargement des étudiants depuis localStorage', savedEtudiants);
-        setEtudiants(savedEtudiants);
-      } else {
-        // Sinon, essayer de les charger depuis l'API
-        try {
-          const etudiantsResponse = await fetchEtudiants();
-          
-          if (typeof etudiantsResponse.data === 'string' && etudiantsResponse.data.includes('<!DOCTYPE html>')) {
-            console.error('API a retourné du HTML au lieu de JSON pour les étudiants');
-            
-            // Utiliser des données statiques pour les étudiants
-            const staticEtudiants = [
-              { id: 1, nom: 'wadi', prenom: '3abdo', date_naissance: '1990-01-01', sexe: 'F', email: 'wadi@example.com', telephone: '', classe: 1, numero_matricule: 'E001' },
-              { id: 2, nom: 'Dupont', prenom: 'Jean', date_naissance: '1992-05-15', sexe: 'F', email: 'jean.dupont@example.com', telephone: '', classe: 1, numero_matricule: 'E002' },
-              { id: 3, nom: 'Martin', prenom: 'Sophie', date_naissance: '1991-09-20', sexe: 'F', email: 'sophie.martin@example.com', telephone: '', classe: 2, numero_matricule: 'E003' }
-            ];
-            setEtudiants(staticEtudiants);
-            saveEtudiantsToLocalStorage(staticEtudiants);
-          } else if (Array.isArray(etudiantsResponse.data)) {
-            console.log('Données d\'étudiants récupérées depuis l\'API');
-            setEtudiants(etudiantsResponse.data);
-            saveEtudiantsToLocalStorage(etudiantsResponse.data);
-          } else {
-            console.error('Format de données inattendu');
-            // Utiliser des données statiques
-            const staticEtudiants = [
-              { id: 1, nom: 'wadi', prenom: '3abdo', date_naissance: '1990-01-01', sexe: 'F', email: 'wadi@example.com', telephone: '', classe: 1, numero_matricule: 'E001' },
-              { id: 2, nom: 'Dupont', prenom: 'Jean', date_naissance: '1992-05-15', sexe: 'F', email: 'jean.dupont@example.com', telephone: '', classe: 1, numero_matricule: 'E002' },
-              { id: 3, nom: 'Martin', prenom: 'Sophie', date_naissance: '1991-09-20', sexe: 'F', email: 'sophie.martin@example.com', telephone: '', classe: 2, numero_matricule: 'E003' }
-            ];
-            setEtudiants(staticEtudiants);
-            saveEtudiantsToLocalStorage(staticEtudiants);
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement des étudiants depuis l\'API:', error);
-          
-          // Données statiques en cas d'erreur
-          const staticEtudiants = [
-            { id: 1, nom: 'wadi', prenom: '3abdo', date_naissance: '1990-01-01', sexe: 'F', email: 'wadi@example.com', telephone: '', classe: 1, numero_matricule: 'E001' },
-            { id: 2, nom: 'Dupont', prenom: 'Jean', date_naissance: '1992-05-15', sexe: 'F', email: 'jean.dupont@example.com', telephone: '', classe: 1, numero_matricule: 'E002' },
-            { id: 3, nom: 'Martin', prenom: 'Sophie', date_naissance: '1991-09-20', sexe: 'F', email: 'sophie.martin@example.com', telephone: '', classe: 2, numero_matricule: 'E003' }
-          ];
-          setEtudiants(staticEtudiants);
-          saveEtudiantsToLocalStorage(staticEtudiants);
-        }
+      // Chargement des étudiants depuis l'API REST
+      try {
+        const etudiantsData = await etudiantService.getAll();
+        console.log('Données d\'étudiants récupérées depuis l\'API');
+        setEtudiants(Array.isArray(etudiantsData) ? etudiantsData : []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des étudiants depuis l\'API:', error);
+        setEtudiants([]);
       }
       
-      // Chargement des classes
+      // Chargement des classes depuis l'API REST
       try {
-        const classesResponse = await fetchClasses();
-        
-        if (typeof classesResponse.data === 'string' && classesResponse.data.includes('<!DOCTYPE html>')) {
-          console.error('API a retourné du HTML au lieu de JSON pour les classes');
-          
-          // Utiliser des données statiques pour les classes
-          const staticClasses = [
-            { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
-            { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
-          ];
-          setClasses(staticClasses);
-          localStorage.setItem('schoolAppClasses', JSON.stringify(staticClasses));
-        } else {
-          setClasses(classesResponse.data);
-          localStorage.setItem('schoolAppClasses', JSON.stringify(classesResponse.data));
-        }
+        const classesData = await classeService.getAll();
+        setClasses(Array.isArray(classesData) ? classesData : []);
       } catch (error) {
         console.error('Erreur lors du chargement des classes depuis l\'API:', error);
-        
-        // Données statiques en cas d'erreur
-        const staticClasses = [
-          { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
-          { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
-        ];
-        setClasses(staticClasses);
-        localStorage.setItem('schoolAppClasses', JSON.stringify(staticClasses));
+        setClasses([]);
       }
     } catch (error) {
       console.error('Erreur générale lors du chargement des données:', error);
@@ -173,22 +94,7 @@ const AdminStudents = () => {
     }
   };
 
-  // Fonction pour sauvegarder les étudiants dans localStorage
-  const saveEtudiantsToLocalStorage = (updatedEtudiants) => {
-    // Utiliser notre gestionnaire de localStorage qui notifie automatiquement les changements
-    saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
-  };
-  
-  // Fonction pour charger les étudiants depuis localStorage
-  const loadEtudiantsFromLocalStorage = () => {
-    // Utiliser notre gestionnaire de localStorage qui assure que les données sont toujours un tableau
-    return loadData(STORAGE_KEYS.ETUDIANTS);
-  };
-  
-  // Fonction pour obtenir uniquement les étudiants actifs (non supprimés)
-  const getActiveEtudiants = () => {
-    return getActiveItems(STORAGE_KEYS.ETUDIANTS);
-  };
+  // Plus besoin de fonctions localStorage, nous utilisons l'API REST
 
   const handleExportExcel = () => {
     try {
@@ -345,91 +251,27 @@ const AdminStudents = () => {
       
       console.log('Envoi des données:', etudiantData);
       
-      // Tentative d'utilisation de l'API (non bloquante pour l'expérience utilisateur)
       if (formType === 'create') {
-        try {
-          // Envoyer la requête à l'API en arrière-plan
-          createEtudiant(etudiantData).then(response => {
-            console.log('Réponse API (création):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la création (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la création:', apiError);
-        }
-        
-        // Créer un nouvel étudiant dans le système
-        const newId = Date.now(); // ID temporaire
-        const newEtudiant = {
-          id: newId,
-          nom: formData.nom,
-          prenom: formData.prenom,
-          date_naissance: formData.date_naissance || new Date().toISOString().split('T')[0],
-          sexe: formData.sexe || 'M',
-          adresse: formData.adresse || '',
-          email: formData.email,
-          telephone: formData.telephone || '',
-          classe: formData.classe ? parseInt(formData.classe, 10) : null,
-          niveau: formData.niveau,
-          numero_matricule: formData.numero_matricule,
-          deleted: false, // S'assurer que le nouvel étudiant est marqué comme actif
-          created_at: new Date().toISOString() // Ajouter une date de création
-        };
+        // Créer un nouvel étudiant via l'API REST
+        const newEtudiant = await etudiantService.create(etudiantData);
+        console.log('Étudiant créé avec succès:', newEtudiant);
         
         // Ajouter l'étudiant à la liste existante
-        const updatedEtudiants = [...etudiants, newEtudiant];
-        
-        // Mettre à jour l'état local
-        setEtudiants(updatedEtudiants);
-        
-        // Sauvegarder dans localStorage avec notre gestionnaire qui notifie automatiquement
-        saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
-        
-        // Publier un événement spécifique pour notifier les autres composants
-        EventBus.publish(EVENTS.ETUDIANTS_CHANGED, updatedEtudiants);
+        setEtudiants([...etudiants, newEtudiant]);
         showSnackbar('Étudiant ajouté avec succès', 'success');
         
       } else if (formType === 'edit' && currentEtudiant) {
-        try {
-          // Envoyer la requête à l'API en arrière-plan
-          updateEtudiant(currentEtudiant.id, etudiantData).then(response => {
-            console.log('Réponse API (modification):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la modification (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la modification:', apiError);
-        }
+        // Mettre à jour l'étudiant via l'API REST
+        const updatedEtudiant = await etudiantService.update(currentEtudiant.id, etudiantData);
+        console.log('Étudiant mis à jour avec succès:', updatedEtudiant);
         
-        // Préparer les données mises à jour
-        const updatedEtudiantData = {
-          ...currentEtudiant,
-          nom: formData.nom,
-          prenom: formData.prenom,
-          date_naissance: formData.date_naissance || currentEtudiant.date_naissance,
-          sexe: formData.sexe || currentEtudiant.sexe,
-          adresse: formData.adresse || currentEtudiant.adresse,
-          email: formData.email,
-          telephone: formData.telephone || currentEtudiant.telephone,
-          classe: formData.classe ? parseInt(formData.classe, 10) : currentEtudiant.classe,
-          niveau: formData.niveau || currentEtudiant.niveau,
-          numero_matricule: formData.numero_matricule,
-          updated_at: new Date().toISOString() // Ajouter horodatage de mise à jour
-        };
-        
-        // Mettre à jour l'étudiant dans la liste
+        // Mettre à jour l'étudiant dans la liste locale
         const updatedEtudiants = etudiants.map(etudiant => 
-          etudiant.id === currentEtudiant.id ? updatedEtudiantData : etudiant
+          etudiant.id === currentEtudiant.id ? updatedEtudiant : etudiant
         );
         
         // Mettre à jour l'état local
         setEtudiants(updatedEtudiants);
-        
-        // Sauvegarder dans localStorage avec notre gestionnaire qui notifie automatiquement
-        saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
-        
-        // Publier un événement spécifique pour notifier les autres composants
-        EventBus.publish(EVENTS.ETUDIANTS_CHANGED, updatedEtudiants);
         showSnackbar('Étudiant modifié avec succès', 'success');
       }
       
@@ -469,76 +311,30 @@ const AdminStudents = () => {
 
   const handleConfirmDelete = async () => {
     try {
-      let updatedEtudiants;
-      
       if (etudiantToDelete) {
-        // Tentative de suppression via l'API (non bloquante pour l'expérience utilisateur)
-        try {
-          deleteEtudiant(etudiantToDelete.id).then(response => {
-            console.log('Réponse API (suppression):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la suppression (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la suppression:', apiError);
-        }
+        // Suppression via l'API REST
+        await etudiantService.delete(etudiantToDelete.id);
         
-        // Au lieu de supprimer complètement l'étudiant, on le marque comme supprimé (soft delete)
-        updatedEtudiants = etudiants.map(etudiant => {
-          if (etudiant.id === etudiantToDelete.id) {
-            return {
-              ...etudiant,
-              deleted: true,
-              deleted_at: new Date().toISOString()
-            };
-          }
-          return etudiant;
-        });
+        // Mettre à jour l'état local
+        const updatedEtudiants = etudiants.filter(etudiant => etudiant.id !== etudiantToDelete.id);
+        setEtudiants(updatedEtudiants);
+        
         showSnackbar('Étudiant supprimé avec succès', 'success');
-        
       } else if (selectedRows.length > 0) {
-        // Tentative de suppression multiple via l'API (non bloquante)
-        try {
-          selectedRows.forEach(id => {
-            deleteEtudiant(id).then(response => {
-              console.log(`Réponse API (suppression de l'ID ${id}):`, response);
-            }).catch(error => {
-              console.error(`Erreur API lors de la suppression de l'ID ${id} (non bloquante):`, error);
-            });
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la suppression multiple:', apiError);
+        // Suppression multiple via l'API REST
+        for (const id of selectedRows) {
+          await etudiantService.delete(id);
         }
         
-        // Marquer les étudiants sélectionnés comme supprimés (soft delete)
-        updatedEtudiants = etudiants.map(etudiant => {
-          if (selectedRows.includes(etudiant.id)) {
-            return {
-              ...etudiant,
-              deleted: true,
-              deleted_at: new Date().toISOString()
-            };
-          }
-          return etudiant;
-        });
+        // Mettre à jour l'état local
+        const updatedEtudiants = etudiants.filter(etudiant => !selectedRows.includes(etudiant.id));
+        setEtudiants(updatedEtudiants);
+        
         showSnackbar(`${selectedRows.length} étudiants supprimés avec succès`, 'success');
         setSelectedRows([]);
       } else {
         return; // Aucun élément à supprimer
       }
-      
-      // Mettre à jour l'état local
-      setEtudiants(updatedEtudiants);
-      
-      // Sauvegarder dans localStorage avec notre gestionnaire qui notifie automatiquement
-      saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
-      
-      // Publier un événement spécifique pour notifier les autres composants (comme le tableau de bord)
-      EventBus.publish(EVENTS.ETUDIANTS_CHANGED, updatedEtudiants);
-      
-      // Mettre à jour l'affichage pour montrer uniquement les étudiants actifs
-      const etudiantsActifs = updatedEtudiants.filter(e => !e.deleted);
-      console.log(`${updatedEtudiants.length - etudiantsActifs.length} étudiants supprimés (masqués).`);
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
       showSnackbar('Erreur lors de la suppression', 'error');

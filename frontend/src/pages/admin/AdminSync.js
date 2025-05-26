@@ -1,20 +1,39 @@
 import React from 'react';
-import { Container, Typography, Paper } from '@mui/material';
-import SyncManager from '../../components/SyncManager';
+import { Container, Typography, Paper, Alert, Button, Box } from '@mui/material';
+import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { Link as RouterLink } from 'react-router-dom';
 
 const AdminSync = () => {
   return (
     <Container maxWidth="lg">
       <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
         <Typography variant="h4" gutterBottom component="h1">
-          Synchronisation des données
+          Statut du Système
         </Typography>
+        
+        <Alert severity="success" icon={<CheckCircleIcon fontSize="inherit" />} sx={{ mb: 3 }}>
+          <Typography variant="h6">Migration vers l'API REST complétée</Typography>
+          <Typography variant="body1">
+            L'application a été entièrement migrée du localStorage vers l'API REST. 
+            Toutes les données sont maintenant directement gérées par le backend Django et stockées dans la base de données MySQL.
+          </Typography>
+        </Alert>
+        
         <Typography variant="body1" paragraph>
-          Cette page vous permet d'envoyer les données du localStorage vers le serveur Django.
-          Toutes les modifications que vous avez effectuées localement (ajouts, modifications, suppressions)
-          seront synchronisées avec la base de données du backend.
+          Le module de synchronisation n'est plus nécessaire car l'application communique maintenant en temps réel avec le serveur via l'API REST.
+          Toutes les opérations (création, lecture, mise à jour, suppression) sont effectuées directement sur la base de données.
         </Typography>
-        <SyncManager />
+        
+        <Box sx={{ mt: 3 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            component={RouterLink} 
+            to="/admin/dashboard"
+          >
+            Retour au Tableau de Bord
+          </Button>
+        </Box>
       </Paper>
     </Container>
   );

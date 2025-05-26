@@ -6,12 +6,21 @@ from django.db.models import Avg, Max, Min
 # Create your models here.
 
 class Classe(models.Model):
+    FILIERE_CHOICES = [
+        ('IIR', 'Ingénierie Informatique & Réseaux'),
+        ('GESI', 'Génie Électrique et Systèmes Intelligents'),
+        ('GCBTP', 'Génie Civil, Bâtiments et Travaux Publics'),
+        ('GI', 'Génie Industriel'),
+        ('GF', 'Génie Financier'),
+    ]
+    
     nom = models.CharField(max_length=100)
     niveau = models.CharField(max_length=50)
+    filiere = models.CharField(max_length=10, choices=FILIERE_CHOICES, default='IIR')
     annee_scolaire = models.CharField(max_length=9, default='2024-2025')
     
     def __str__(self):
-        return f"{self.nom} - {self.annee_scolaire}"
+        return f"{self.nom} - {self.get_filiere_display()} - {self.annee_scolaire}"
     
     def nombre_etudiants(self):
         return self.etudiant_set.count()

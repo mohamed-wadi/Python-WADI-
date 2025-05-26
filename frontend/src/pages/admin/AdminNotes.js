@@ -42,41 +42,15 @@ import {
 } from '@mui/icons-material';
 
 import { NIVEAUX_INGENIEUR, TYPES_EVALUATION } from '../../utils/constants';
+import { etudiantService, matiereService, professeurService, classeService, noteService } from '../../utils/apiService';
 
 const AdminNotes = () => {
   // États pour les données
-  const [classes, setClasses] = useState([
-    { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
-    { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
-  ]);
-  
+  const [classes, setClasses] = useState([]);
   const [matieres, setMatieres] = useState([]);
   const [professeurs, setProfesseurs] = useState([]);
-  
-  // Données statiques de secours
-  const staticMatieres = [
-    { id: 1, nom: 'Mathématiques', coefficient: 3, professeur: 1 },
-    { id: 2, nom: 'Français', coefficient: 2, professeur: 2 },
-    { id: 3, nom: 'Histoire-Géographie', coefficient: 2, professeur: 3 },
-    { id: 4, nom: 'Anglais', coefficient: 2, professeur: 4 },
-    { id: 5, nom: 'Physique-Chimie', coefficient: 2, professeur: 5 }
-  ];
-  
-  const staticProfesseurs = [
-    { id: 1, nom: 'Dupont', prenom: 'Jean', email: 'jean.dupont@ecole.fr' },
-    { id: 2, nom: 'Martin', prenom: 'Sophie', email: 'sophie.martin@ecole.fr' },
-    { id: 3, nom: 'Bernard', prenom: 'Pierre', email: 'pierre.bernard@ecole.fr' },
-    { id: 4, nom: 'Thomas', prenom: 'Marie', email: 'marie.thomas@ecole.fr' },
-    { id: 5, nom: 'Richard', prenom: 'Paul', email: 'paul.richard@ecole.fr' }
-  ];
-  
   const [etudiants, setEtudiants] = useState([]);
-  
-  const [notes, setNotes] = useState([
-    { id: 1, etudiant: 1, matiere: 1, professeur: 1, valeur: 15.5, date_evaluation: '2025-05-20', type_evaluation: 'Examen', trimestre: 1, commentaire: 'Bon travail' },
-    { id: 2, etudiant: 1, matiere: 2, professeur: 2, valeur: 14, date_evaluation: '2025-05-15', type_evaluation: 'Contrôle', trimestre: 1, commentaire: 'Peut mieux faire' },
-    { id: 3, etudiant: 1, matiere: 3, professeur: 3, valeur: 16, date_evaluation: '2025-05-10', type_evaluation: 'TP', trimestre: 1, commentaire: 'Excellent' }
-  ]);
+  const [notes, setNotes] = useState([]);
   
   // États pour les filtres
   const [selectedNiveau, setSelectedNiveau] = useState('');
@@ -118,85 +92,73 @@ const AdminNotes = () => {
   // États pour le chargement
   const [loading, setLoading] = useState(false);
   
-  // Fonction pour charger les étudiants depuis localStorage
-  const loadEtudiantsFromLocalStorage = () => {
-    const savedEtudiants = localStorage.getItem('schoolAppEtudiants');
-    if (savedEtudiants) {
-      try {
-        const parsedEtudiants = JSON.parse(savedEtudiants);
-        setEtudiants(parsedEtudiants);
-        console.log('Chargement des étudiants depuis localStorage:', parsedEtudiants);
-      } catch (error) {
-        console.error('Erreur lors du parsing des étudiants depuis localStorage:', error);
-        // Utiliser des données statiques en cas d'erreur
-        setEtudiants([
-          { id: 1, nom: 'wadi', prenom: '3abdo', classe: 1 },
-          { id: 2, nom: 'Dupont', prenom: 'Jean', classe: 1 },
-          { id: 3, nom: 'Martin', prenom: 'Sophie', classe: 2 },
-        ]);
-      }
-    } else {
-      console.log('Aucun étudiant trouvé dans localStorage, utilisation des données statiques');
-      // Utiliser des données statiques si localStorage est vide
-      setEtudiants([
-        { id: 1, nom: 'wadi', prenom: '3abdo', classe: 1 },
-        { id: 2, nom: 'Dupont', prenom: 'Jean', classe: 1 },
-        { id: 3, nom: 'Martin', prenom: 'Sophie', classe: 2 },
-      ]);
+  // Fonction pour charger les étudiants depuis l'API
+  const loadEtudiants = async () => {
+    try {
+      const data = await etudiantService.getAll();
+      setEtudiants(Array.isArray(data) ? data : []);
+      console.log('Chargement des étudiants depuis l\'API:', data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des étudiants depuis l\'API:', error);
+      setEtudiants([]);
     }
   };
   
-  // Fonction pour charger les matières depuis localStorage
-  const loadMatieresFromLocalStorage = () => {
-    const savedMatieres = localStorage.getItem('schoolAppMatieres');
-    if (savedMatieres) {
-      try {
-        const parsedMatieres = JSON.parse(savedMatieres);
-        if (Array.isArray(parsedMatieres) && parsedMatieres.length > 0) {
-          setMatieres(parsedMatieres);
-          console.log('Chargement des matières depuis localStorage:', parsedMatieres);
-        } else {
-          console.log('Les matières dans localStorage ne sont pas un tableau ou sont vides');
-          setMatieres(staticMatieres);
-        }
-      } catch (error) {
-        console.error('Erreur lors du parsing des matières depuis localStorage:', error);
-        setMatieres(staticMatieres);
-      }
-    } else {
-      console.log('Aucune matière trouvée dans localStorage, utilisation des données statiques');
-      setMatieres(staticMatieres);
+  // Fonction pour charger les matières depuis l'API
+  const loadMatieres = async () => {
+    try {
+      const data = await matiereService.getAll();
+      setMatieres(Array.isArray(data) ? data : []);
+      console.log('Chargement des matières depuis l\'API:', data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des matières depuis l\'API:', error);
+      setMatieres([]);
     }
   };
   
-  // Fonction pour charger les professeurs depuis localStorage
-  const loadProfesseursFromLocalStorage = () => {
-    const savedProfesseurs = localStorage.getItem('schoolAppProfesseurs');
-    if (savedProfesseurs) {
-      try {
-        const parsedProfesseurs = JSON.parse(savedProfesseurs);
-        if (Array.isArray(parsedProfesseurs) && parsedProfesseurs.length > 0) {
-          setProfesseurs(parsedProfesseurs);
-          console.log('Chargement des professeurs depuis localStorage:', parsedProfesseurs);
-        } else {
-          console.log('Les professeurs dans localStorage ne sont pas un tableau ou sont vides');
-          setProfesseurs(staticProfesseurs);
-        }
-      } catch (error) {
-        console.error('Erreur lors du parsing des professeurs depuis localStorage:', error);
-        setProfesseurs(staticProfesseurs);
-      }
-    } else {
-      console.log('Aucun professeur trouvé dans localStorage, utilisation des données statiques');
-      setProfesseurs(staticProfesseurs);
+  // Fonction pour charger les professeurs depuis l'API
+  const loadProfesseurs = async () => {
+    try {
+      const data = await professeurService.getAll();
+      setProfesseurs(Array.isArray(data) ? data : []);
+      console.log('Chargement des professeurs depuis l\'API:', data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des professeurs depuis l\'API:', error);
+      setProfesseurs([]);
     }
   };
   
-  // Charger les données depuis localStorage au chargement de la page
+  // Fonction pour charger les classes depuis l'API
+  const loadClasses = async () => {
+    try {
+      const data = await classeService.getAll();
+      setClasses(Array.isArray(data) ? data : []);
+      console.log('Chargement des classes depuis l\'API:', data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des classes depuis l\'API:', error);
+      setClasses([]);
+    }
+  };
+  
+  // Fonction pour charger les notes depuis l'API
+  const loadNotes = async () => {
+    try {
+      const data = await noteService.getAll();
+      setNotes(Array.isArray(data) ? data : []);
+      console.log('Chargement des notes depuis l\'API:', data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des notes depuis l\'API:', error);
+      setNotes([]);
+    }
+  };
+  
+  // Charger les données depuis l'API au chargement de la page
   useEffect(() => {
-    loadEtudiantsFromLocalStorage();
-    loadMatieresFromLocalStorage();
-    loadProfesseursFromLocalStorage();
+    loadEtudiants();
+    loadMatieres();
+    loadProfesseurs();
+    loadClasses();
+    loadNotes();
   }, []);
   
   // Filtrer les notes en fonction des critères sélectionnés
@@ -350,7 +312,7 @@ const AdminNotes = () => {
     });
   };
   
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     try {
       setLoading(true);
       
@@ -374,37 +336,26 @@ const AdminNotes = () => {
       
       // En mode édition ou création?
       if (editingNote) {
-        // Édition d'une note existante
+        // Édition d'une note existante via l'API REST
         console.log('Mise à jour de la note:', editingNote.id, noteData);
+        
+        const updatedNote = await noteService.update(editingNote.id, noteData);
         
         // Mettre à jour l'état local des notes
         const updatedNotes = notes.map(note => 
-          note.id === editingNote.id ? { ...note, ...noteData, id: editingNote.id } : note
+          note.id === editingNote.id ? updatedNote : note
         );
         
         setNotes(updatedNotes);
-        
-        // Sauvegarder dans localStorage
-        localStorage.setItem('schoolAppNotes', JSON.stringify(updatedNotes));
-        
         showSnackbar('Note mise à jour avec succès', 'success');
       } else {
-        // Création d'une nouvelle note
+        // Création d'une nouvelle note via l'API REST
         console.log('Création d\'une nouvelle note:', noteData);
         
-        // Simuler une réponse du serveur avec un ID
-        const newNote = { 
-          ...noteData, 
-          id: Math.max(...notes.map(n => n.id), 0) + 1 
-        };
+        const newNote = await noteService.create(noteData);
         
         // Ajouter la note à l'état local
-        const updatedNotes = [...notes, newNote];
-        setNotes(updatedNotes);
-        
-        // Sauvegarder dans localStorage
-        localStorage.setItem('schoolAppNotes', JSON.stringify(updatedNotes));
-        
+        setNotes([...notes, newNote]);
         showSnackbar('Note ajoutée avec succès', 'success');
       }
       
@@ -413,7 +364,7 @@ const AdminNotes = () => {
       
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement de la note:', error);
-      showSnackbar('Erreur lors de l\'enregistrement de la note', 'error');
+      showSnackbar('Erreur lors de l\'enregistrement de la note: ' + (error.message || 'Erreur inconnue'), 'error');
     } finally {
       setLoading(false);
     }
@@ -425,13 +376,16 @@ const AdminNotes = () => {
     setOpenDeleteDialog(true);
   };
   
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     try {
       setLoading(true);
       
       if (!noteToDelete) return;
       
       console.log('Suppression de la note:', noteToDelete.id);
+      
+      // Supprimer la note via l'API REST
+      await noteService.delete(noteToDelete.id);
       
       // Mettre à jour l'état local des notes
       setNotes(notes.filter(note => note.id !== noteToDelete.id));
@@ -441,7 +395,7 @@ const AdminNotes = () => {
       setNoteToDelete(null);
     } catch (error) {
       console.error('Erreur lors de la suppression de la note:', error);
-      showSnackbar('Erreur lors de la suppression de la note', 'error');
+      showSnackbar('Erreur lors de la suppression de la note: ' + (error.message || 'Erreur inconnue'), 'error');
     } finally {
       setLoading(false);
     }

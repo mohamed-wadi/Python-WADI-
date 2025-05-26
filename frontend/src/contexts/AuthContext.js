@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Configuration d'axios pour l'authentification
 const authApi = axios.create({
-  baseURL: 'http://localhost:8002/api',
+  baseURL: 'http://localhost:8000/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

@@ -7,6 +7,23 @@ export const NIVEAUX_INGENIEUR = [
   { id: 5, nom: "5ème année", code: "ING5" }
 ];
 
+// Définition des niveaux d'ingénieur (nouvelle version)
+// export const NIVEAUX_INGENIEUR = [
+//   'Classe Préparatoire 1',
+//   'Classe Préparatoire 2',
+//   'Ingénieur 1ère Année',
+//   'Ingénieur 2ème Année',
+//   'Ingénieur 3ème Année',
+// ];
+
+export const FILIERES_CHOICES = [
+  { value: 'IIR', label: 'Ingénierie Informatique & Réseaux' },
+  { value: 'GESI', label: 'Génie Électrique et Systèmes Intelligents' },
+  { value: 'GCBTP', label: 'Génie Civil, Bâtiments et Travaux Publics' },
+  { value: 'GI', label: 'Génie Industriel' },
+  { value: 'GF', label: 'Génie Financier' },
+];
+
 // Options pour le type d'évaluation
 export const TYPES_EVALUATION = [
   "Examen", 

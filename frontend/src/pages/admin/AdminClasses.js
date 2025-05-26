@@ -28,15 +28,8 @@ import {
   School as SchoolIcon
 } from '@mui/icons-material';
 
-import { 
-  fetchClasses, 
-  createClasse, 
-  updateClasse, 
-  deleteClasse,
-} from '../../utils/api';
-
-import { NIVEAUX_INGENIEUR } from '../../utils/constants';
-import { updateModifiedTimestamp } from '../../utils/syncService';
+import { classeService } from '../../utils/apiService';
+import { NIVEAUX_INGENIEUR, FILIERES_CHOICES } from '../../utils/constants';
 
 // Utilisation des API REST pour la gestion des classes avec fallback localStorage
 
@@ -49,6 +42,7 @@ const AdminClasses = () => {
   const [formData, setFormData] = useState({
     nom: '',
     niveau: '',
+    filiere: 'IIR',
     annee_scolaire: '2024-2025'
   });
   const [openConfirm, setOpenConfirm] = useState(false);
@@ -61,94 +55,28 @@ const AdminClasses = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   
-  // Fonction pour sauvegarder les classes et mettre à jour le timestamp de modification
-  
-  // Fonction pour sauvegarder les classes dans localStorage
-  const saveClassesToLocalStorage = (updatedClasses) => {
-    // Sauvegarder dans toutes les clés potentielles pour éviter les conflits
-    localStorage.setItem('schoolAppClasses', JSON.stringify(updatedClasses));
-    localStorage.setItem('schoolAppClasses_backup', JSON.stringify(updatedClasses));
-    
-    // Supprimer toute copie dans d'autres composants qui pourrait causer des conflits
-    localStorage.removeItem('classes');
-    
-    // Mettre à jour le timestamp de modification pour la synchronisation
-    updateModifiedTimestamp();
-    
-    // Message de débogage pour tracer les opérations sur le localStorage
-    console.log('IMPORTANT: Classes sauvegardées dans localStorage:', updatedClasses);
-    console.log('Nombre de classes actuelles:', updatedClasses.length);
-  };
-  
-  // Fonction pour charger les classes depuis localStorage
-  const loadClassesFromLocalStorage = () => {
-    const savedClasses = localStorage.getItem('schoolAppClasses');
-    return savedClasses ? JSON.parse(savedClasses) : null;
-  };
+  // Plus besoin de fonctions localStorage, nous utilisons l'API REST
 
   useEffect(() => {
     // Charger les données au démarrage
     loadData();
-    
-    // Ajouter un écouteur d'événements pour recharger les données à chaque rafraîchissement
-    const handleBeforeUnload = () => {
-      // S'assurer que les modifications sont enregistrées avant le rafraîchissement
-      const currentClasses = loadClassesFromLocalStorage();
-      if (currentClasses && currentClasses.length > 0) {
-        console.log('Sauvegarde des classes avant rafraîchissement:', currentClasses);
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
   }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      // D'abord, essayer de charger les classes depuis le localStorage
-      const savedClasses = loadClassesFromLocalStorage();
-      
-      // Si des classes existent dans localStorage, les utiliser TOUJOURS
-      if (savedClasses && savedClasses.length > 0) {
-        console.log('Chargement des classes depuis localStorage', savedClasses);
-        setClasses(savedClasses);
-      } else {
-        // Sinon seulement, initialiser avec des données par défaut
-        // Définir des données statiques pour les classes (avec des niveaux conformes)
-        const staticClasses = [
-          { id: 1, nom: 'Classe ING1-A', niveau: '1', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-          { id: 2, nom: 'Classe ING2-A', niveau: '2', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-          { id: 3, nom: 'Classe ING3-A', niveau: '3', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-          { id: 4, nom: 'Classe ING4-A', niveau: '4', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-          { id: 5, nom: 'Classe ING5-A', niveau: '5', annee_scolaire: '2024-2025', nb_etudiants: 0 }
-        ];
-        
-        try {
-          // Tenter de charger depuis l'API comme solution secondaire
-          const response = await fetchClasses();
-          
-          if (Array.isArray(response.data) && response.data.length > 0) {
-            console.log('Données de classes récupérées depuis l\'API');
-            setClasses(response.data);
-            saveClassesToLocalStorage(response.data);
-          } else {
-            console.log('Initialisation avec des classes par défaut');
-            setClasses(staticClasses);
-            saveClassesToLocalStorage(staticClasses);
-          }
-        } catch (apiError) {
-          console.error('Erreur lors du chargement des classes depuis l\'API:', apiError);
-          console.log('Initialisation avec des classes par défaut');
-          setClasses(staticClasses);
-          saveClassesToLocalStorage(staticClasses);
-        }
+      // Chargement des classes depuis l'API REST
+      try {
+        const classesData = await classeService.getAll();
+        console.log('Données de classes récupérées depuis l\'API');
+        setClasses(Array.isArray(classesData) ? classesData : []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des classes depuis l\'API:', error);
+        setClasses([]);
+        showSnackbar('Erreur lors du chargement des classes', 'error');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      console.error('Erreur générale lors du chargement des données:', error);
       showSnackbar('Erreur lors du chargement des données', 'error');
     } finally {
       setLoading(false);
@@ -162,7 +90,10 @@ const AdminClasses = () => {
     if (type === 'edit' && classe) {
       setCurrentClasse(classe);
       setFormData({
-        ...classe
+        nom: classe.nom,
+        niveau: classe.niveau,
+        filiere: classe.filiere || 'IIR',
+        annee_scolaire: classe.annee_scolaire
       });
     } else {
       // Réinitialiser le formulaire pour la création
@@ -202,6 +133,7 @@ const AdminClasses = () => {
     
     if (!formData.nom) errors.nom = 'Le nom est requis';
     if (!formData.niveau) errors.niveau = 'Le niveau est requis';
+    if (!formData.filiere) errors.filiere = 'La filière est requise';
     if (!formData.annee_scolaire) errors.annee_scolaire = 'L\'année scolaire est requise';
     else if (!/^\d{4}-\d{4}$/.test(formData.annee_scolaire)) {
       errors.annee_scolaire = 'Format attendu: AAAA-AAAA (ex: 2024-2025)';
@@ -214,69 +146,35 @@ const AdminClasses = () => {
   const handleSubmitForm = async () => {
     if (!validateForm()) return;
     
-    // Debug log des données avant envoi
-    console.log('Données du formulaire à envoyer:', formData);
-    
     try {
       if (formType === 'create') {
-        try {
-          // Tenter d'envoyer la requête à l'API en arrière-plan (non bloquant)
-          createClasse(formData).then(response => {
-            console.log('Réponse API (création):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la création (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la création:', apiError);
-        }
-        
-        // Gérer localement pour une expérience utilisateur fluide
-        const newId = Date.now(); // ID temporaire
-        const newClasse = {
-          id: newId,
+        // Créer une nouvelle classe via l'API REST
+        const newClasse = await classeService.create({
           nom: formData.nom,
           niveau: formData.niveau,
-          annee_scolaire: formData.annee_scolaire || '2024-2025',
-          nb_etudiants: 0 // Défaut pour une nouvelle classe
-        };
+          filiere: formData.filiere,
+          annee_scolaire: formData.annee_scolaire || '2024-2025'
+        });
+        console.log('Classe créée avec succès:', newClasse);
         
         // Mettre à jour l'état local
-        const updatedClasses = [...classes, newClasse];
-        setClasses(updatedClasses);
-        
-        // Sauvegarder dans localStorage
-        saveClassesToLocalStorage(updatedClasses);
+        setClasses([...classes, newClasse]);
         showSnackbar('Classe ajoutée avec succès', 'success');
       } else if (currentClasse) {
-        try {
-          // Tenter d'envoyer la requête à l'API en arrière-plan (non bloquant)
-          updateClasse(currentClasse.id, formData).then(response => {
-            console.log('Réponse API (modification):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la modification (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la modification:', apiError);
-        }
-        
-        // Mettre à jour la classe dans la liste locale
-        const updatedClasses = classes.map(classe => {
-          if (classe.id === currentClasse.id) {
-            return {
-              ...classe,
-              nom: formData.nom,
-              niveau: formData.niveau,
-              annee_scolaire: formData.annee_scolaire || classe.annee_scolaire
-            };
-          }
-          return classe;
+        // Mettre à jour la classe via l'API REST
+        const updatedClasse = await classeService.update(currentClasse.id, {
+          nom: formData.nom,
+          niveau: formData.niveau,
+          filiere: formData.filiere,
+          annee_scolaire: formData.annee_scolaire || currentClasse.annee_scolaire
         });
+        console.log('Classe mise à jour avec succès:', updatedClasse);
         
         // Mettre à jour l'état local
+        const updatedClasses = classes.map(classe => 
+          classe.id === currentClasse.id ? updatedClasse : classe
+        );
         setClasses(updatedClasses);
-        
-        // Sauvegarder dans localStorage
-        saveClassesToLocalStorage(updatedClasses);
         showSnackbar('Classe modifiée avec succès', 'success');
       }
       
@@ -316,49 +214,29 @@ const AdminClasses = () => {
 
   const handleConfirmDelete = async () => {
     try {
-      let updatedClasses;
-      
       if (classeToDelete) {
-        // Tentative de suppression via l'API (non bloquante pour l'expérience utilisateur)
-        try {
-          deleteClasse(classeToDelete.id).then(response => {
-            console.log('Réponse API (suppression):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la suppression (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la suppression:', apiError);
-        }
+        // Suppression via l'API REST
+        await classeService.delete(classeToDelete.id);
         
-        // Supprimer la classe de la liste locale
-        updatedClasses = classes.filter(classe => classe.id !== classeToDelete.id);
+        // Mettre à jour l'état local
+        const updatedClasses = classes.filter(classe => classe.id !== classeToDelete.id);
+        setClasses(updatedClasses);
         showSnackbar('Classe supprimée avec succès', 'success');
         
       } else if (selectedRows.length > 0) {
-        // Tentative de suppression multiple via l'API (non bloquante)
-        try {
-          selectedRows.forEach(id => {
-            deleteClasse(id).then(response => {
-              console.log(`Réponse API (suppression de l'ID ${id}):`, response);
-            }).catch(error => {
-              console.error(`Erreur API lors de la suppression de l'ID ${id} (non bloquante):`, error);
-            });
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la suppression multiple:', apiError);
+        // Suppression multiple via l'API REST
+        for (const id of selectedRows) {
+          await classeService.delete(id);
         }
         
-        // Supprimer les classes sélectionnées de la liste locale
-        updatedClasses = classes.filter(classe => !selectedRows.includes(classe.id));
+        // Mettre à jour l'état local
+        const updatedClasses = classes.filter(classe => !selectedRows.includes(classe.id));
+        setClasses(updatedClasses);
         showSnackbar(`${selectedRows.length} classes supprimées avec succès`, 'success');
         setSelectedRows([]);
       } else {
         return; // Aucun élément à supprimer
       }
-      
-      // Mettre à jour l'état et le localStorage
-      setClasses(updatedClasses);
-      saveClassesToLocalStorage(updatedClasses);
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
       showSnackbar('Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'), 'error');
@@ -390,15 +268,16 @@ const AdminClasses = () => {
 
   // Colonnes pour le DataGrid
   const columns = [
+    { field: 'id', headerName: 'ID', width: 70 },
     { field: 'nom', headerName: 'Nom', width: 200 },
-    { 
-      field: 'niveau', 
-      headerName: 'Niveau', 
-      width: 150,
-      renderCell: (params) => {
-        const niveauId = params.value;
-        const niveau = NIVEAUX_INGENIEUR.find(n => n.id.toString() === niveauId);
-        return niveau ? niveau.nom : niveauId;
+    { field: 'niveau', headerName: 'Niveau', width: 150,
+      valueGetter: (params) => {
+        return NIVEAUX_INGENIEUR.find(n => n.id.toString() === params.row.niveau)?.nom || params.row.niveau;
+      }
+    },
+    { field: 'filiere', headerName: 'Filière', width: 180,
+      valueGetter: (params) => {
+        return FILIERES_CHOICES.find(f => f.value === params.row.filiere)?.label || params.row.filiere;
       }
     },
     { field: 'annee_scolaire', headerName: 'Année scolaire', width: 150 },
@@ -540,7 +419,31 @@ const AdminClasses = () => {
                 )}
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required error={Boolean(formErrors.filiere)}>
+                <InputLabel id="filiere-select-label">Filière</InputLabel>
+                <Select
+                  labelId="filiere-select-label"
+                  id="filiere-select"
+                  name="filiere"
+                  value={formData.filiere}
+                  onChange={handleInputChange}
+                  label="Filière"
+                >
+                  {FILIERES_CHOICES.map((filiere) => (
+                    <MenuItem key={filiere.value} value={filiere.value}>
+                      {filiere.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {formErrors.filiere && (
+                  <Typography color="error" variant="caption">
+                    {formErrors.filiere}
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
               <TextField
                 name="annee_scolaire"
                 label="Année scolaire"

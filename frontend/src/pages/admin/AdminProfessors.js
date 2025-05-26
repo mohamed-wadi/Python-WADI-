@@ -29,12 +29,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 
-import { 
-  fetchProfesseurs, 
-  createProfesseur, 
-  updateProfesseur, 
-  deleteProfesseur
-} from '../../utils/api';
+import { professeurService } from '../../utils/apiService';
 
 import { NIVEAUX_INGENIEUR } from '../../utils/constants';
 
@@ -65,16 +60,7 @@ const AdminProfessors = () => {
   });
   const [formErrors, setFormErrors] = useState({});
 
-  // Fonction pour sauvegarder les professeurs dans localStorage
-  const saveProfesseursToLocalStorage = (updatedProfesseurs) => {
-    localStorage.setItem('schoolAppProfesseurs', JSON.stringify(updatedProfesseurs));
-  };
-  
-  // Fonction pour charger les professeurs depuis localStorage
-  const loadProfesseursFromLocalStorage = () => {
-    const savedProfesseurs = localStorage.getItem('schoolAppProfesseurs');
-    return savedProfesseurs ? JSON.parse(savedProfesseurs) : null;
-  };
+  // Plus besoin de fonctions localStorage, nous utilisons l'API REST
 
   useEffect(() => {
     loadData();
@@ -83,57 +69,18 @@ const AdminProfessors = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // D'abord, essayer de charger les professeurs depuis le localStorage
-      const savedProfesseurs = loadProfesseursFromLocalStorage();
-      
-      // Si des professeurs existent dans localStorage, les utiliser
-      if (savedProfesseurs && savedProfesseurs.length > 0) {
-        console.log('Chargement des professeurs depuis localStorage', savedProfesseurs);
-        setProfesseurs(savedProfesseurs);
-      } else {
-        // Sinon, essayer de les charger depuis l'API
-        try {
-          // Définir des données statiques à utiliser en cas d'erreur
-          const staticProfesseurs = [
-            { id: 1, nom: 'Dupont', prenom: 'Jean', email: 'jean.dupont@example.com', telephone: '0612345678', specialite: 'Mathématiques', date_embauche: '2020-09-01' },
-            { id: 2, nom: 'Martin', prenom: 'Sophie', email: 'sophie.martin@example.com', telephone: '0623456789', specialite: 'Français', date_embauche: '2019-09-01' },
-            { id: 3, nom: 'Bernard', prenom: 'Michel', email: 'michel.bernard@example.com', telephone: '0634567890', specialite: 'Histoire-Géographie', date_embauche: '2021-09-01' },
-            { id: 4, nom: 'Petit', prenom: 'Anne', email: 'anne.petit@example.com', telephone: '0645678901', specialite: 'Anglais', date_embauche: '2018-09-01' },
-            { id: 5, nom: 'Robert', prenom: 'Pierre', email: 'pierre.robert@example.com', telephone: '0656789012', specialite: 'Physique-Chimie', date_embauche: '2022-09-01' }
-          ];
-          
-          const response = await fetchProfesseurs();
-          
-          if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
-            console.error('API a retourné du HTML au lieu de JSON pour les professeurs');
-            setProfesseurs(staticProfesseurs);
-            saveProfesseursToLocalStorage(staticProfesseurs);
-          } else if (Array.isArray(response.data)) {
-            console.log('Données de professeurs récupérées depuis l\'API');
-            setProfesseurs(response.data);
-            saveProfesseursToLocalStorage(response.data);
-          } else {
-            console.error('Format de données inattendu');
-            setProfesseurs(staticProfesseurs);
-            saveProfesseursToLocalStorage(staticProfesseurs);
-          }
-        } catch (apiError) {
-          console.error('Erreur lors du chargement des professeurs depuis l\'API:', apiError);
-          
-          // Données statiques en cas d'erreur
-          const staticProfesseurs = [
-            { id: 1, nom: 'Dupont', prenom: 'Jean', email: 'jean.dupont@example.com', telephone: '0612345678', specialite: 'Mathématiques', date_embauche: '2020-09-01' },
-            { id: 2, nom: 'Martin', prenom: 'Sophie', email: 'sophie.martin@example.com', telephone: '0623456789', specialite: 'Français', date_embauche: '2019-09-01' },
-            { id: 3, nom: 'Bernard', prenom: 'Michel', email: 'michel.bernard@example.com', telephone: '0634567890', specialite: 'Histoire-Géographie', date_embauche: '2021-09-01' },
-            { id: 4, nom: 'Petit', prenom: 'Anne', email: 'anne.petit@example.com', telephone: '0645678901', specialite: 'Anglais', date_embauche: '2018-09-01' },
-            { id: 5, nom: 'Robert', prenom: 'Pierre', email: 'pierre.robert@example.com', telephone: '0656789012', specialite: 'Physique-Chimie', date_embauche: '2022-09-01' }
-          ];
-          setProfesseurs(staticProfesseurs);
-          saveProfesseursToLocalStorage(staticProfesseurs);
-        }
+      // Chargement des professeurs depuis l'API REST
+      try {
+        const professeursData = await professeurService.getAll();
+        console.log('Données de professeurs récupérées depuis l\'API');
+        setProfesseurs(Array.isArray(professeursData) ? professeursData : []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des professeurs depuis l\'API:', error);
+        setProfesseurs([]);
+        showSnackbar('Erreur lors du chargement des professeurs', 'error');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      console.error('Erreur générale lors du chargement des données:', error);
       showSnackbar('Erreur lors du chargement des données', 'error');
     } finally {
       setLoading(false);
@@ -223,69 +170,23 @@ const AdminProfessors = () => {
     
     try {
       if (formType === 'create') {
-        try {
-          // Tenter d'envoyer la requête à l'API en arrière-plan (non bloquant)
-          createProfesseur(formData).then(response => {
-            console.log('Réponse API (création):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la création (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la création:', apiError);
-        }
-        
-        // Gérer localement pour une expérience utilisateur fluide
-        const newId = Date.now(); // ID temporaire
-        const newProfesseur = {
-          id: newId,
-          nom: formData.nom,
-          prenom: formData.prenom,
-          email: formData.email,
-          telephone: formData.telephone || '',
-          specialite: formData.specialite,
-          date_embauche: formData.date_embauche || new Date().toISOString().split('T')[0]
-        };
+        // Créer un nouveau professeur via l'API REST
+        const newProfesseur = await professeurService.create(formData);
+        console.log('Professeur créé avec succès:', newProfesseur);
         
         // Mettre à jour l'état local
-        const updatedProfesseurs = [...professeurs, newProfesseur];
-        setProfesseurs(updatedProfesseurs);
-        
-        // Sauvegarder dans localStorage
-        saveProfesseursToLocalStorage(updatedProfesseurs);
+        setProfesseurs([...professeurs, newProfesseur]);
         showSnackbar('Professeur ajouté avec succès', 'success');
       } else if (currentProfesseur) {
-        try {
-          // Tenter d'envoyer la requête à l'API en arrière-plan (non bloquant)
-          updateProfesseur(currentProfesseur.id, formData).then(response => {
-            console.log('Réponse API (modification):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la modification (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la modification:', apiError);
-        }
-        
-        // Mettre à jour le professeur dans la liste locale
-        const updatedProfesseurs = professeurs.map(professeur => {
-          if (professeur.id === currentProfesseur.id) {
-            return {
-              ...professeur,
-              nom: formData.nom,
-              prenom: formData.prenom,
-              email: formData.email,
-              telephone: formData.telephone || professeur.telephone,
-              specialite: formData.specialite,
-              date_embauche: formData.date_embauche || professeur.date_embauche
-            };
-          }
-          return professeur;
-        });
+        // Mettre à jour le professeur via l'API REST
+        const updatedProfesseur = await professeurService.update(currentProfesseur.id, formData);
+        console.log('Professeur mis à jour avec succès:', updatedProfesseur);
         
         // Mettre à jour l'état local
+        const updatedProfesseurs = professeurs.map(professeur => 
+          professeur.id === currentProfesseur.id ? updatedProfesseur : professeur
+        );
         setProfesseurs(updatedProfesseurs);
-        
-        // Sauvegarder dans localStorage
-        saveProfesseursToLocalStorage(updatedProfesseurs);
         showSnackbar('Professeur modifié avec succès', 'success');
       }
       
@@ -304,49 +205,29 @@ const AdminProfessors = () => {
 
   const handleConfirmDelete = async () => {
     try {
-      let updatedProfesseurs;
-      
       if (professeurToDelete) {
-        // Tentative de suppression via l'API (non bloquante pour l'expérience utilisateur)
-        try {
-          deleteProfesseur(professeurToDelete.id).then(response => {
-            console.log('Réponse API (suppression):', response);
-          }).catch(error => {
-            console.error('Erreur API lors de la suppression (non bloquante):', error);
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la suppression:', apiError);
-        }
+        // Suppression via l'API REST
+        await professeurService.delete(professeurToDelete.id);
         
-        // Supprimer le professeur de la liste locale
-        updatedProfesseurs = professeurs.filter(professeur => professeur.id !== professeurToDelete.id);
+        // Mettre à jour l'état local
+        const updatedProfesseurs = professeurs.filter(professeur => professeur.id !== professeurToDelete.id);
+        setProfesseurs(updatedProfesseurs);
         showSnackbar('Professeur supprimé avec succès', 'success');
         
       } else if (selectedRows.length > 0) {
-        // Tentative de suppression multiple via l'API (non bloquante)
-        try {
-          selectedRows.forEach(id => {
-            deleteProfesseur(id).then(response => {
-              console.log(`Réponse API (suppression de l'ID ${id}):`, response);
-            }).catch(error => {
-              console.error(`Erreur API lors de la suppression de l'ID ${id} (non bloquante):`, error);
-            });
-          });
-        } catch (apiError) {
-          console.error('Erreur API lors de la suppression multiple:', apiError);
+        // Suppression multiple via l'API REST
+        for (const id of selectedRows) {
+          await professeurService.delete(id);
         }
         
-        // Supprimer les professeurs sélectionnés de la liste locale
-        updatedProfesseurs = professeurs.filter(professeur => !selectedRows.includes(professeur.id));
+        // Mettre à jour l'état local
+        const updatedProfesseurs = professeurs.filter(professeur => !selectedRows.includes(professeur.id));
+        setProfesseurs(updatedProfesseurs);
         showSnackbar(`${selectedRows.length} professeurs supprimés avec succès`, 'success');
         setSelectedRows([]);
       } else {
         return; // Aucun élément à supprimer
       }
-      
-      // Mettre à jour l'état et le localStorage
-      setProfesseurs(updatedProfesseurs);
-      saveProfesseursToLocalStorage(updatedProfesseurs);
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
       showSnackbar('Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'), 'error');

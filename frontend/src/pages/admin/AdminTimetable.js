@@ -35,67 +35,48 @@ import {
 } from '@mui/icons-material';
 import CalendarSchedule from '../../components/CalendarSchedule';
 
-import { 
-  fetchCours, 
-  createCour, 
-  updateCour, 
-  deleteCour,
-  fetchClasses,
-  fetchProfesseurs,
-  fetchMatieres
-} from '../../utils/api';
+import { coursService, classeService, professeurService, matiereService } from '../../utils/apiService';
 
 import { NIVEAUX_INGENIEUR, JOURS_SEMAINE, HEURES_JOURNEE } from '../../utils/constants';
 
-// Fonctions pour gérer les données dans localStorage
-const loadClassesFromLocalStorage = () => {
+// Fonctions pour gérer les données via l'API REST
+const loadClasses = async () => {
   try {
-    // Utiliser la même clé que dans AdminClasses.js
-    const savedClasses = localStorage.getItem('schoolAppClasses');
-    // En cas d'échec, essayer la sauvegarde
-    const backupClasses = localStorage.getItem('schoolAppClasses_backup');
-    
-    if (savedClasses) {
-      console.log('Chargement des classes depuis localStorage pour l\'emploi du temps');
-      return JSON.parse(savedClasses);
-    } else if (backupClasses) {
-      console.log('Chargement des classes depuis la sauvegarde pour l\'emploi du temps');
-      return JSON.parse(backupClasses);
-    }
-    return null;
+    const data = await classeService.getAll();
+    return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Erreur lors du chargement des classes depuis localStorage:', error);
-    return null;
+    console.error('Erreur lors du chargement des classes depuis l\'API:', error);
+    return [];
   }
 };
 
-const loadProfesseursFromLocalStorage = () => {
+const loadProfesseurs = async () => {
   try {
-    // Utiliser la même clé que dans AdminProfessors.js
-    const savedProfesseurs = localStorage.getItem('schoolAppProfesseurs');
-    if (savedProfesseurs) {
-      console.log('Professeurs chargés depuis localStorage pour l\'emploi du temps');
-      return JSON.parse(savedProfesseurs);
-    }
-    return null;
+    const data = await professeurService.getAll();
+    return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Erreur lors du chargement des professeurs depuis localStorage:', error);
-    return null;
+    console.error('Erreur lors du chargement des professeurs depuis l\'API:', error);
+    return [];
   }
 };
 
-const loadMatieresFromLocalStorage = () => {
+const loadMatieres = async () => {
   try {
-    // Utiliser la même clé que dans AdminSubjects.js
-    const savedMatieres = localStorage.getItem('schoolAppMatieres');
-    if (savedMatieres) {
-      console.log('Matières chargées depuis localStorage pour l\'emploi du temps');
-      return JSON.parse(savedMatieres);
-    }
-    return null;
+    const data = await matiereService.getAll();
+    return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Erreur lors du chargement des matières depuis localStorage:', error);
-    return null;
+    console.error('Erreur lors du chargement des matières depuis l\'API:', error);
+    return [];
+  }
+};
+
+const loadCours = async () => {
+  try {
+    const data = await coursService.getAll();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Erreur lors du chargement des cours depuis l\'API:', error);
+    return [];
   }
 };
 
@@ -222,87 +203,54 @@ const AdminTimetable = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Charger les cours depuis localStorage en priorité
-      const localCours = localStorage.getItem('saved_courses');
-      if (localCours) {
-        try {
-          const parsedCours = JSON.parse(localCours);
-          if (Array.isArray(parsedCours)) {
-            console.log('Utilisation des cours depuis localStorage');
-            setCours(parsedCours);
-          } else {
-            console.log('Les cours dans localStorage ne sont pas dans un format valide');
-            setCours(staticCours);
-            localStorage.setItem('saved_courses', JSON.stringify(staticCours));
-          }
-        } catch (parseError) {
-          console.error('Erreur lors du parsing des cours depuis localStorage:', parseError);
-          setCours(staticCours);
-          localStorage.setItem('saved_courses', JSON.stringify(staticCours));
-        }
-      } else {
-        console.log('Aucun cours trouvé dans localStorage, utilisation des données statiques');
-        setCours(staticCours);
-        localStorage.setItem('saved_courses', JSON.stringify(staticCours));
-      }
-      
-      // Tenter de récupérer les données depuis l'API
+      // Charger toutes les données depuis l'API
       try {
-        const [classesResponse, professeursResponse, matieresResponse] = await Promise.allSettled([
-          fetchClasses(),
-          fetchProfesseurs(),
-          fetchMatieres()
-        ]);
+        // Charger les cours
+        const coursData = await loadCours();
+        if (coursData.length > 0) {
+          console.log('Cours chargés depuis l\'API');
+          setCours(coursData);
+        } else {
+          console.log('Aucun cours trouvé, utilisation des données statiques');
+          setCours(staticCours);
+          // Créer les cours statiques dans la base de données
+          for (const cours of staticCours) {
+            try {
+              await coursService.create(cours);
+            } catch (err) {
+              console.error('Erreur lors de la création du cours statique:', err);
+            }
+          }
+        }
         
-        // Vérifier si les requêtes ont réussi
-        console.log('Résultats API:', { 
-          classes: classesResponse, 
-          professeurs: professeursResponse, 
-          matieres: matieresResponse 
-        });
-        
-        // Charger les classes depuis localStorage en priorité absolue
-        const localClasses = loadClassesFromLocalStorage();
-        if (localClasses && localClasses.length > 0) {
-          console.log('Classes chargées depuis localStorage pour l\'emploi du temps');
-          setClasses(localClasses);
-        } else if (classesResponse.status === 'fulfilled' && Array.isArray(classesResponse.value.data)) {
+        // Charger les classes
+        const classesData = await loadClasses();
+        if (classesData.length > 0) {
           console.log('Classes chargées depuis l\'API');
-          setClasses(classesResponse.value.data);
+          setClasses(classesData);
         } else {
           console.log('Utilisation des classes statiques');
           setClasses(staticClasses);
-          // Ne pas écraser les classes dans localStorage pour éviter les conflits avec AdminClasses.js
         }
         
-        // Charger les professeurs depuis localStorage en priorité
-        const localProfesseurs = loadProfesseursFromLocalStorage();
-        if (localProfesseurs && localProfesseurs.length > 0) {
-          console.log('Professeurs chargés depuis localStorage');
-          setProfesseurs(localProfesseurs);
-        } else if (professeursResponse.status === 'fulfilled' && Array.isArray(professeursResponse.value.data)) {
+        // Charger les professeurs
+        const professeursData = await loadProfesseurs();
+        if (professeursData.length > 0) {
           console.log('Professeurs chargés depuis l\'API');
-          setProfesseurs(professeursResponse.value.data);
-          localStorage.setItem('schoolAppProfesseurs', JSON.stringify(professeursResponse.value.data));
+          setProfesseurs(professeursData);
         } else {
           console.log('Utilisation des professeurs statiques');
           setProfesseurs(staticProfesseurs);
-          localStorage.setItem('schoolAppProfesseurs', JSON.stringify(staticProfesseurs));
         }
         
-        // Charger les matières depuis localStorage en priorité
-        const localMatieres = loadMatieresFromLocalStorage();
-        if (localMatieres && localMatieres.length > 0) {
-          console.log('Matières chargées depuis localStorage');
-          setMatieres(localMatieres);
-        } else if (matieresResponse.status === 'fulfilled' && Array.isArray(matieresResponse.value.data)) {
+        // Charger les matières
+        const matieresData = await loadMatieres();
+        if (matieresData.length > 0) {
           console.log('Matières chargées depuis l\'API');
-          setMatieres(matieresResponse.value.data);
-          localStorage.setItem('schoolAppMatieres', JSON.stringify(matieresResponse.value.data));
+          setMatieres(matieresData);
         } else {
           console.log('Utilisation des matières statiques');
           setMatieres(staticMatieres);
-          localStorage.setItem('schoolAppMatieres', JSON.stringify(staticMatieres));
         }
       } catch (apiError) {
         console.error('Erreur lors de la récupération des données depuis l\'API:', apiError);
@@ -310,9 +258,7 @@ const AdminTimetable = () => {
         setClasses(staticClasses);
         setProfesseurs(staticProfesseurs);
         setMatieres(staticMatieres);
-        // Ne pas écraser les classes dans localStorage pour éviter les conflits avec AdminClasses.js
-        localStorage.setItem('schoolAppProfesseurs', JSON.stringify(staticProfesseurs));
-        localStorage.setItem('schoolAppMatieres', JSON.stringify(staticMatieres));
+        setCours(staticCours);
       }
       
       // Sélectionner la première entité par défaut si aucune n'est sélectionnée
@@ -451,54 +397,25 @@ const handleSubmitForm = async () => {
       salle: formData.salle
     };
     
-    // Rechercher les détails pour enrichir les données
-    const matiereDetails = matieres.find(m => m.id === parseInt(formData.matiere));
-    const professeurDetails = professeurs.find(p => p.id === parseInt(formData.professeur));
-    const classeDetails = classes.find(c => c.id === parseInt(formData.classe));
-    
-    // Extraire les noms pour l'affichage
-    const matiere_nom = matiereDetails ? matiereDetails.nom : 'Matière inconnue';
-    const professeur_nom = professeurDetails ? `${professeurDetails.prenom} ${professeurDetails.nom}` : 'Professeur inconnu';
-    const classe_nom = classeDetails ? classeDetails.nom : 'Classe inconnue';
-    
     if (formType === 'add') {
-      // Créer un nouvel ID unique
-      const newId = Date.now();
-      const newCourse = {
-        ...courseData,
-        id: newId,
-        matiere_nom,
-        professeur_nom,
-        classe_nom,
-      };
+      // Créer un nouveau cours via l'API REST
+      const newCourse = await coursService.create(courseData);
       
       // Ajouter le cours à l'état local
       setCours(currentCours => {
         const currentArray = Array.isArray(currentCours) ? currentCours : [];
-        const newList = [...currentArray, newCourse];
-        saveCoursToLocalStorage(newList);
-        return newList;
+        return [...currentArray, newCourse];
       });
       
       showSnackbar('Cours ajouté avec succès', 'success');
     } else if (formType === 'edit' && editingCours) {
-      // Mettre à jour un cours existant
-      const updatedCourse = {
-        ...courseData,
-        id: editingCours.id,
-        matiere_nom,
-        professeur_nom,
-        classe_nom,
-      };
+      // Mettre à jour un cours existant via l'API REST
+      const updatedCourse = await coursService.update(editingCours.id, courseData);
       
       // Mettre à jour l'état local
       setCours(currentCours => {
         const currentArray = Array.isArray(currentCours) ? currentCours : [];
-        const updatedList = currentArray.map(c => 
-          c.id === editingCours.id ? updatedCourse : c
-        );
-        saveCoursToLocalStorage(updatedList);
-        return updatedList;
+        return currentArray.map(c => c.id === editingCours.id ? updatedCourse : c);
       });
       
       showSnackbar('Cours mis à jour avec succès', 'success');
@@ -520,13 +437,15 @@ const handleConfirmDelete = async () => {
   if (!coursToDelete) return;
   
   try {
-    // Supprimer le cours
-    const updatedCours = cours.filter(c => c.id !== coursToDelete.id);
-    setCours(updatedCours);
-    saveCoursToLocalStorage(updatedCours);
+    // Supprimer le cours via l'API REST
+    await coursService.delete(coursToDelete.id);
+    
+    // Mettre à jour l'état local
+    setCours(cours.filter(c => c.id !== coursToDelete.id));
     showSnackbar('Cours supprimé avec succès', 'success');
   } catch (error) {
-    showSnackbar('Erreur lors de la suppression', 'error');
+    console.error('Erreur lors de la suppression du cours:', error);
+    showSnackbar('Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'), 'error');
   } finally {
     setOpenConfirm(false);
     setCoursToDelete(null);
