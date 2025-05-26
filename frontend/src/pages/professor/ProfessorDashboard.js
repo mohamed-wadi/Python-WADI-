@@ -19,10 +19,40 @@ const ProfessorDashboard = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const response = await fetchProfesseurDashboard();
-        setDashboardData(response.data);
+        // Utiliser des données statiques au lieu de l'API
+        const mockDashboardData = {
+          statistiques_classes: [
+            {
+              classe_id: 1,
+              classe_nom: 'ijh',
+              nb_etudiants: 2,
+              moyenne_generale: 14.2,
+              nb_notes: 5
+            },
+            {
+              classe_id: 2,
+              classe_nom: 'vg66',
+              nb_etudiants: 1,
+              moyenne_generale: 16.5,
+              nb_notes: 2
+            }
+          ],
+          matieres: [
+            { id: 1, nom: 'Mathématiques', coefficient: 3 },
+            { id: 4, nom: 'Anglais', coefficient: 2 }
+          ],
+          emploi_du_temps: [
+            { jour: 'Lundi', heure_debut: '08:00', heure_fin: '10:00', matiere: 'Mathématiques', classe: 'ijh' },
+            { jour: 'Mardi', heure_debut: '14:00', heure_fin: '16:00', matiere: 'Anglais', classe: 'ijh' },
+            { jour: 'Jeudi', heure_debut: '10:00', heure_fin: '12:00', matiere: 'Mathématiques', classe: 'vg66' }
+          ],
+          total_etudiants: 3,
+          total_notes: 7
+        };
+        
+        setDashboardData(mockDashboardData);
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
+        console.error("Error loading dashboard data:", err);
         setError("Impossible de charger les données du tableau de bord");
       } finally {
         setLoading(false);

@@ -1,0 +1,316 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Typography,
+  Paper,
+  Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  IconButton,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tabs,
+  Tab
+} from '@mui/material';
+import { 
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Schedule as ScheduleIcon
+} from '@mui/icons-material';
+import CalendarSchedule from '../../components/CalendarSchedule';
+
+import { 
+  fetchCours, 
+  createCour, 
+  updateCour, 
+  deleteCour,
+  fetchClasses,
+  fetchProfesseurs,
+  fetchMatieres
+} from '../../utils/api';
+
+// Fonctions pour gérer les données dans localStorage
+const loadProfesseursFromLocalStorage = () => {
+  try {
+    // Utiliser la même clé que dans AdminProfessors.js
+    const savedProfesseurs = localStorage.getItem('schoolAppProfesseurs');
+    if (savedProfesseurs) {
+      console.log('Professeurs chargés depuis localStorage pour l\'emploi du temps');
+      return JSON.parse(savedProfesseurs);
+    }
+    return null;
+  } catch (error) {
+    console.error('Erreur lors du chargement des professeurs depuis localStorage:', error);
+    return null;
+  }
+};
+
+const loadMatieresFromLocalStorage = () => {
+  try {
+    // Utiliser la même clé que dans AdminSubjects.js
+    const savedMatieres = localStorage.getItem('schoolAppMatieres');
+    if (savedMatieres) {
+      console.log('Matières chargées depuis localStorage pour l\'emploi du temps');
+      return JSON.parse(savedMatieres);
+    }
+    return null;
+  } catch (error) {
+    console.error('Erreur lors du chargement des matières depuis localStorage:', error);
+    return null;
+  }
+};
+
+const saveCoursToLocalStorage = (cours) => {
+  try {
+    localStorage.setItem('saved_courses', JSON.stringify(cours));
+    console.log('Cours sauvegardés dans localStorage');
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde des cours dans localStorage:', error);
+    return false;
+  }
+};
+
+// Jours de la semaine pour l'emploi du temps
+const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+// Heures de la journée (8h à 18h)
+const HEURES = Array.from({ length: 11 }, (_, i) => ({
+  label: `${i + 8}:00`,
+  value: `${(i + 8).toString().padStart(2, '0')}:00:00`
+}));
+
+// Données statiques pour le fallback
+const staticClasses = [
+  { id: 1, nom: 'Terminale S', niveau: 'Terminale', annee_scolaire: '2023-2024' },
+  { id: 2, nom: 'Première ES', niveau: 'Première', annee_scolaire: '2023-2024' },
+  { id: 3, nom: 'Seconde A', niveau: 'Seconde', annee_scolaire: '2023-2024' }
+];
+
+const staticProfesseurs = [
+  { id: 1, nom: 'Dupont', prenom: 'Jean', email: 'jean.dupont@example.com', specialite: 'Mathématiques' },
+  { id: 2, nom: 'Martin', prenom: 'Sophie', email: 'sophie.martin@example.com', specialite: 'Français' },
+  { id: 3, nom: 'Bernard', prenom: 'Michel', email: 'michel.bernard@example.com', specialite: 'Histoire-Géographie' }
+];
+
+const staticMatieres = [
+  { id: 1, nom: 'Mathématiques', code: 'MATH101', coefficient: 5 },
+  { id: 2, nom: 'Physique-Chimie', code: 'PHY101', coefficient: 4 },
+  { id: 3, nom: 'Histoire-Géographie', code: 'HIST101', coefficient: 3 }
+];
+
+const staticCours = [
+  { 
+    id: 1, 
+    matiere: 1, 
+    professeur: 1, 
+    classe: 1, 
+    jour: 'Lundi', 
+    heure_debut: '08:00:00', 
+    heure_fin: '10:00:00',
+    salle: 'Salle 101',
+    matiere_nom: 'Mathématiques',
+    professeur_nom: 'Jean Dupont',
+    classe_nom: 'Terminale S'
+  },
+  { 
+    id: 2, 
+    matiere: 2, 
+    professeur: 2, 
+    classe: 2, 
+    jour: 'Mardi', 
+    heure_debut: '14:00:00', 
+    heure_fin: '16:00:00',
+    salle: 'Salle 202',
+    matiere_nom: 'Physique-Chimie',
+    professeur_nom: 'Sophie Martin',
+    classe_nom: 'Première ES'
+  }
+];
+
+const AdminTimetable = () => {
+  const [cours, setCours] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [professeurs, setProfesseurs] = useState([]);
+  const [matieres, setMatieres] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [viewMode, setViewMode] = useState('classe'); // 'classe' ou 'professeur'
+  const [selectedEntity, setSelectedEntity] = useState('');
+  const [selectedTab, setSelectedTab] = useState(0);
+  
+  // États pour le formulaire
+  const [openForm, setOpenForm] = useState(false);
+  const [formType, setFormType] = useState('add'); // 'add' ou 'edit'
+  const [formData, setFormData] = useState({
+    matiere: '',
+    professeur: '',
+    classe: '',
+    jour: '',
+    heure_debut: '',
+    heure_fin: '',
+    salle: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [editingCours, setEditingCours] = useState(null);
+  
+  // États pour la confirmation de suppression
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [coursToDelete, setCoursToDelete] = useState(null);
+  
+  // État pour les notifications
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
+
+  // Charger les données au chargement du composant
+  useEffect(() => {
+    loadData();
+  }, []);
+  
+  // Effet pour mettre à jour la vue quand l'entité sélectionnée change
+  useEffect(() => {
+    console.log(`Vue mise à jour: Mode=${viewMode}, Entité=${selectedEntity}`);
+  }, [selectedEntity, viewMode]);
+
+  // Fonction principale pour charger les données
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Charger les cours depuis localStorage en priorité
+      const localCours = localStorage.getItem('saved_courses');
+      if (localCours) {
+        try {
+          const parsedCours = JSON.parse(localCours);
+          if (Array.isArray(parsedCours)) {
+            console.log('Utilisation des cours depuis localStorage');
+            setCours(parsedCours);
+          } else {
+            console.log('Les cours dans localStorage ne sont pas dans un format valide');
+            setCours(staticCours);
+            localStorage.setItem('saved_courses', JSON.stringify(staticCours));
+          }
+        } catch (parseError) {
+          console.error('Erreur lors du parsing des cours depuis localStorage:', parseError);
+          setCours(staticCours);
+          localStorage.setItem('saved_courses', JSON.stringify(staticCours));
+        }
+      } else {
+        console.log('Aucun cours trouvé dans localStorage, utilisation des données statiques');
+        setCours(staticCours);
+        localStorage.setItem('saved_courses', JSON.stringify(staticCours));
+      }
+      
+      // Tenter de récupérer les données depuis l'API
+      try {
+        const [classesResponse, professeursResponse, matieresResponse] = await Promise.allSettled([
+          fetchClasses(),
+          fetchProfesseurs(),
+          fetchMatieres()
+        ]);
+        
+        // Vérifier si les requêtes ont réussi
+        console.log('Résultats API:', { 
+          classes: classesResponse, 
+          professeurs: professeursResponse, 
+          matieres: matieresResponse 
+        });
+        
+        // Charger les classes depuis l'API ou utiliser les données statiques
+        if (classesResponse.status === 'fulfilled' && Array.isArray(classesResponse.value.data)) {
+          console.log('Classes chargées depuis l\'API');
+          setClasses(classesResponse.value.data);
+        } else {
+          console.log('Utilisation des classes statiques');
+          setClasses(staticClasses);
+          localStorage.setItem('schoolAppClasses', JSON.stringify(staticClasses));
+        }
+        
+        // Charger les professeurs depuis localStorage en priorité
+        const localProfesseurs = loadProfesseursFromLocalStorage();
+        if (localProfesseurs && localProfesseurs.length > 0) {
+          console.log('Professeurs chargés depuis localStorage');
+          setProfesseurs(localProfesseurs);
+        } else if (professeursResponse.status === 'fulfilled' && Array.isArray(professeursResponse.value.data)) {
+          console.log('Professeurs chargés depuis l\'API');
+          setProfesseurs(professeursResponse.value.data);
+          localStorage.setItem('schoolAppProfesseurs', JSON.stringify(professeursResponse.value.data));
+        } else {
+          console.log('Utilisation des professeurs statiques');
+          setProfesseurs(staticProfesseurs);
+          localStorage.setItem('schoolAppProfesseurs', JSON.stringify(staticProfesseurs));
+        }
+        
+        // Charger les matières depuis localStorage en priorité
+        const localMatieres = loadMatieresFromLocalStorage();
+        if (localMatieres && localMatieres.length > 0) {
+          console.log('Matières chargées depuis localStorage');
+          setMatieres(localMatieres);
+        } else if (matieresResponse.status === 'fulfilled' && Array.isArray(matieresResponse.value.data)) {
+          console.log('Matières chargées depuis l\'API');
+          setMatieres(matieresResponse.value.data);
+          localStorage.setItem('schoolAppMatieres', JSON.stringify(matieresResponse.value.data));
+        } else {
+          console.log('Utilisation des matières statiques');
+          setMatieres(staticMatieres);
+          localStorage.setItem('schoolAppMatieres', JSON.stringify(staticMatieres));
+        }
+      } catch (apiError) {
+        console.error('Erreur lors de la récupération des données depuis l\'API:', apiError);
+        console.log('Utilisation des données statiques suite à l\'erreur');
+        setClasses(staticClasses);
+        setProfesseurs(staticProfesseurs);
+        setMatieres(staticMatieres);
+        localStorage.setItem('schoolAppClasses', JSON.stringify(staticClasses));
+        localStorage.setItem('schoolAppProfesseurs', JSON.stringify(staticProfesseurs));
+        localStorage.setItem('schoolAppMatieres', JSON.stringify(staticMatieres));
+      }
+      
+      // Sélectionner la première entité par défaut si aucune n'est sélectionnée
+      if (!selectedEntity) {
+        if (viewMode === 'classe' && classes.length > 0) {
+          setSelectedEntity(classes[0].id.toString());
+        } else if (viewMode === 'professeur' && professeurs.length > 0) {
+          setSelectedEntity(professeurs[0].id.toString());
+        }
+      }
+    } catch (error) {
+      console.error('Erreur générale lors du chargement des données:', error);
+      showSnackbar('Erreur lors du chargement des données', 'error');
+      
+      // Fallback sur les données statiques en cas d'erreur
+      setCours(staticCours);
+      setClasses(staticClasses);
+      setProfesseurs(staticProfesseurs);
+      setMatieres(staticMatieres);
+      
+      // Sélectionner la première entité par défaut
+      if (!selectedEntity) {
+        if (viewMode === 'classe' && staticClasses.length > 0) {
+          setSelectedEntity(staticClasses[0].id.toString());
+        } else if (viewMode === 'professeur' && staticProfesseurs.length > 0) {
+          setSelectedEntity(staticProfesseurs[0].id.toString());
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };

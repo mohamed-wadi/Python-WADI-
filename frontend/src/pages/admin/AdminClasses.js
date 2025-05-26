@@ -36,6 +36,7 @@ import {
 } from '../../utils/api';
 
 import { NIVEAUX_INGENIEUR } from '../../utils/constants';
+import { updateModifiedTimestamp } from '../../utils/syncService';
 
 // Utilisation des API REST pour la gestion des classes avec fallback localStorage
 
@@ -60,6 +61,8 @@ const AdminClasses = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   
+  // Fonction pour sauvegarder les classes et mettre à jour le timestamp de modification
+  
   // Fonction pour sauvegarder les classes dans localStorage
   const saveClassesToLocalStorage = (updatedClasses) => {
     // Sauvegarder dans toutes les clés potentielles pour éviter les conflits
@@ -68,6 +71,9 @@ const AdminClasses = () => {
     
     // Supprimer toute copie dans d'autres composants qui pourrait causer des conflits
     localStorage.removeItem('classes');
+    
+    // Mettre à jour le timestamp de modification pour la synchronisation
+    updateModifiedTimestamp();
     
     // Message de débogage pour tracer les opérations sur le localStorage
     console.log('IMPORTANT: Classes sauvegardées dans localStorage:', updatedClasses);

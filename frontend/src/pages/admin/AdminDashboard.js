@@ -1,34 +1,106 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Typography, Paper, Box, Divider, Skeleton, Alert } from '@mui/material';
+import { Grid, Typography, Paper, Box, Divider, Skeleton, Alert, Button, Card, CardContent, CardActions } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { 
   People as PeopleIcon, 
   School as SchoolIcon,
   MenuBook as MenuBookIcon,
   Person as PersonIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { fetchAdminDashboard } from '../../utils/api';
 import StatCard from '../../components/Dashboard/StatCard';
+import { STORAGE_KEYS, EVENTS, getActiveItems } from '../../utils/localStorageManager';
+import EventBus from '../../utils/eventBus';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        const response = await fetchAdminDashboard();
-        setDashboardData(response.data);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        setError("Impossible de charger les données du tableau de bord");
-      } finally {
-        setLoading(false);
-      }
+    // Charger les données initiales
+    loadDynamicDashboardData();
+    
+    // Écouter les changements dans le localStorage depuis d'autres onglets
+    window.addEventListener('storage', handleStorageChange);
+    
+    // S'abonner aux événements de changement de données dans la même fenêtre
+    const unsubscribeDataChanged = EventBus.subscribe(EVENTS.DATA_CHANGED, () => {
+      console.log('Tableau de bord: Notification de changement de données reçue');
+      loadDynamicDashboardData();
+    });
+    
+    // Nettoyage des listeners si le composant est démonté
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      unsubscribeDataChanged(); // Se désabonner de l'événement
     };
-
-    loadDashboardData();
   }, []);
+  
+  // Fonction pour gérer les changements dans le localStorage depuis d'autres onglets
+  const handleStorageChange = (event) => {
+    console.log('Détection de changement dans localStorage:', event.key);
+    if ([
+      STORAGE_KEYS.ETUDIANTS, 
+      STORAGE_KEYS.PROFESSEURS, 
+      STORAGE_KEYS.CLASSES, 
+      STORAGE_KEYS.MATIERES
+    ].includes(event.key)) {
+      loadDynamicDashboardData();
+    }
+  };
+  
+  // Rafraîchir manuellement les données du tableau de bord
+  const refreshDashboard = () => {
+    console.log('Rafraîchissement manuel du tableau de bord');
+    loadDynamicDashboardData();
+  };
+  
+  // Charger les données dynamiquement depuis le localStorage
+  const loadDynamicDashboardData = () => {
+    setLoading(true);
+    
+    try {
+      // Récupérer les éléments actifs uniquement (non supprimés)
+      const etudiantsActifs = getActiveItems(STORAGE_KEYS.ETUDIANTS);
+      const professeursActifs = getActiveItems(STORAGE_KEYS.PROFESSEURS);
+      const classesActives = getActiveItems(STORAGE_KEYS.CLASSES);
+      const matieresActives = getActiveItems(STORAGE_KEYS.MATIERES);
+      
+      // Compter par niveau d'ingénieur (ING1 à ING5)
+      const etudiantsParNiveau = {};
+      etudiantsActifs.forEach(etudiant => {
+        const niveau = etudiant.niveau || '1';
+        etudiantsParNiveau[niveau] = (etudiantsParNiveau[niveau] || 0) + 1;
+      });
+      
+      const dashboardData = {
+        nb_etudiants: etudiantsActifs.length,
+        nb_professeurs: professeursActifs.length,
+        nb_classes: classesActives.length,
+        nb_matieres: matieresActives.length,
+        etudiants_par_niveau: etudiantsParNiveau
+      };
+      
+      console.log('Données dynamiques du tableau de bord:', dashboardData);
+      setDashboardData(dashboardData);
+    } catch (error) {
+      console.error('Erreur lors du chargement des données du tableau de bord:', error);
+      setError('Erreur lors du chargement des données');
+      // Utiliser des valeurs par défaut en cas d'erreur
+      setDashboardData({
+        nb_etudiants: 0,
+        nb_professeurs: 0,
+        nb_classes: 0,
+        nb_matieres: 0,
+        etudiants_par_niveau: {}
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (

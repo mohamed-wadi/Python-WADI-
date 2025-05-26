@@ -33,7 +33,9 @@ const drawerWidth = 240;
 const DashboardLayout = ({ children, title, menuItems, avatarText }) => {
   const [open, setOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
-  const { user, profile, logout } = useAuth();
+  const { user, profile, role, logout } = useAuth();
+  console.log('DashboardLayout - user:', user);
+  console.log('DashboardLayout - role:', role);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -129,7 +131,15 @@ const DashboardLayout = ({ children, title, menuItems, avatarText }) => {
         open={Boolean(anchorEl)}
         onClose={handleProfileMenuClose}
       >
-        <MenuItem onClick={handleProfileMenuClose}>
+        <MenuItem onClick={() => {
+          handleProfileMenuClose();
+          // Déterminer l'URL du profil en fonction du rôle de l'utilisateur
+          const profilePath = role === 'admin' ? '/admin/profil' : 
+                              role === 'professeur' ? '/professeur/profil' : 
+                              '/etudiant/profil';
+          console.log('Redirection vers:', profilePath);
+          navigate(profilePath);
+        }}>
           <ListItemIcon>
             <Person fontSize="small" />
           </ListItemIcon>

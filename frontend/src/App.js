@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import createAppTheme from './utils/theme';
+import { loadDjangoData, setupAutoSync } from './utils/djangoDataLoader';
 
 // Layouts
 import LoginLayout from './layouts/LoginLayout';
@@ -38,8 +39,26 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 };
 
 function AppContent() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const theme = createAppTheme(role);
+
+  // Initialiser la synchronisation automatique avec Django
+  useEffect(() => {
+    if (user) {
+      console.log('Initialisation de la synchronisation avec Django');
+      // Charger les données depuis Django au démarrage
+      loadDjangoData().then(success => {
+        if (success) {
+          console.log('Données Django chargées avec succès');
+        } else {
+          console.warn('Échec du chargement des données Django, utilisation des données locales uniquement');
+        }
+      });
+      
+      // Configurer la synchronisation automatique
+      setupAutoSync();
+    }
+  }, [user]); // Se déclenche quand l'utilisateur se connecte
 
   return (
     <ThemeProvider theme={theme}>

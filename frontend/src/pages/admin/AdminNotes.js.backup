@@ -1,0 +1,802 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Typography, 
+  Paper, 
+  Box, 
+  Grid,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Snackbar,
+  Alert,
+  Tooltip,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  Card,
+  CardContent,
+  Divider,
+  Chip
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  FilterList as FilterIcon,
+  Assignment as AssignmentIcon,
+  Save as SaveIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
+
+// API calls
+import { 
+  fetchClasses, 
+  fetchMatieres, 
+  fetchEtudiantsByClasse,
+  fetchNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+  fetchProfesseurs
+} from '../../utils/api';
+
+const AdminNotes = () => {
+  // États pour les données
+  const [classes, setClasses] = useState([]);
+  const [matieres, setMatieres] = useState([]);
+  const [etudiants, setEtudiants] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [professeurs, setProfesseurs] = useState([]);
+  
+  // États pour les filtres
+  const [selectedClasse, setSelectedClasse] = useState('');
+  const [selectedMatiere, setSelectedMatiere] = useState('');
+  const [selectedProfesseur, setSelectedProfesseur] = useState('');
+  const [selectedTrimestre, setSelectedTrimestre] = useState(1);
+  
+  // États pour le formulaire de notes
+  const [openNoteDialog, setOpenNoteDialog] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
+  const [noteForm, setNoteForm] = useState({
+    etudiant: '',
+    matiere: '',
+    professeur: '',
+    valeur: '',
+    date_evaluation: new Date().toISOString().split('T')[0],
+    type_evaluation: 'Examen',
+    commentaire: '',
+    trimestre: 1
+  });
+  
+  // États pour la confirmation de suppression
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState(null);
+  
+  // États pour la pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // États pour les notifications
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  
+  // États pour le chargement
+  const [loading, setLoading] = useState(true);
+  
+  // Charger les données initiales
+  useEffect(() => {
+    loadInitialData();
+    
+    // Si les classes ne sont pas disponibles, nous initialisons avec des données statiques pour éviter l'erreur
+    // C'est une solution temporaire en attendant que l'API backend soit corrigée
+    setClasses([
+      { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
+      { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
+    ]);
+    
+    // Même chose pour les matières
+    setMatieres([
+      { id: 1, nom: 'Mathématiques', coefficient: 3, professeur: 1 },
+      { id: 2, nom: 'Français', coefficient: 2, professeur: 2 },
+      { id: 3, nom: 'Histoire-Géographie', coefficient: 2, professeur: 3 },
+      { id: 4, nom: 'Anglais', coefficient: 2, professeur: 4 },
+      { id: 5, nom: 'Physique-Chimie', coefficient: 2, professeur: 5 }
+    ]);
+    
+    // Et aussi pour les professeurs
+    setProfesseurs([
+      { id: 1, nom: 'Dupont', prenom: 'Jean', email: 'jean.dupont@ecole.fr' },
+      { id: 2, nom: 'Martin', prenom: 'Sophie', email: 'sophie.martin@ecole.fr' },
+      { id: 3, nom: 'Bernard', prenom: 'Pierre', email: 'pierre.bernard@ecole.fr' },
+      { id: 4, nom: 'Thomas', prenom: 'Marie', email: 'marie.thomas@ecole.fr' },
+      { id: 5, nom: 'Richard', prenom: 'Paul', email: 'paul.richard@ecole.fr' }
+    ]);
+  }, []);
+  
+  // Charger les étudiants lorsque la classe sélectionnée change
+  useEffect(() => {
+    if (selectedClasse) {
+      loadEtudiants(selectedClasse);
+      console.log('Chargement des étudiants pour la classe', selectedClasse);
+    } else {
+      setEtudiants([]);
+    }
+  }, [selectedClasse]);
+  
+  // Charger les notes en fonction des filtres
+  useEffect(() => {
+    loadNotes();
+    
+    // Ajouter des notes statiques comme solution temporaire
+    const mockNotes = [
+      { id: 1, etudiant: 1, matiere: 1, professeur: 1, valeur: 15.5, date_evaluation: '2025-05-20', type_evaluation: 'Examen', trimestre: 1, commentaire: 'Bon travail' },
+      { id: 2, etudiant: 1, matiere: 2, professeur: 2, valeur: 14, date_evaluation: '2025-05-15', type_evaluation: 'Contrôle', trimestre: 1, commentaire: 'Peut mieux faire' },
+      { id: 3, etudiant: 1, matiere: 3, professeur: 3, valeur: 16, date_evaluation: '2025-05-10', type_evaluation: 'TP', trimestre: 1, commentaire: 'Excellent' }
+    ];
+    setNotes(mockNotes);
+  }, [selectedClasse, selectedMatiere, selectedProfesseur, selectedTrimestre]);
+  
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      // Note: Nous n'utilisons plus les appels API car ils retournent du HTML au lieu de JSON
+      // Tout est maintenant géré avec des données statiques dans le useEffect
+      
+      // Sélectionner automatiquement la première classe
+      setSelectedClasse('1'); // ID de la première classe
+      // Sélectionner automatiquement la première matière
+      setSelectedMatiere('1'); // ID de la première matière
+      // Sélectionner automatiquement le premier professeur
+      setSelectedProfesseur('1'); // ID du premier professeur
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des données initiales:', error);
+      showSnackbar('Erreur lors du chargement des données', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const loadEtudiants = async (classeId) => {
+    try {
+      console.log('Appel API fetchEtudiantsByClasse avec classeId:', classeId);
+      const response = await fetchEtudiantsByClasse(classeId);
+      console.log('Réponse de l\'API pour les étudiants:', response.data);
+      
+      if (Array.isArray(response.data)) {
+        setEtudiants(response.data);
+      } else {
+        console.error('La réponse n\'est pas un tableau:', response.data);
+        // Initialiser avec un tableau vide en cas de problème
+        setEtudiants([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des étudiants:', error);
+      setEtudiants([]);
+      showSnackbar('Erreur lors du chargement des étudiants', 'error');
+    }
+  };
+  
+  const loadNotes = async () => {
+    try {
+      // Construire les paramètres de recherche en fonction des filtres
+      const params = {};
+      if (selectedClasse) params.classe = selectedClasse;
+      if (selectedMatiere) params.matiere = selectedMatiere;
+      if (selectedProfesseur) params.professeur = selectedProfesseur;
+      if (selectedTrimestre) params.trimestre = selectedTrimestre;
+      
+      // Simulation - remplacer par un vrai appel API
+      const response = await fetchNotes(params);
+      
+      // Pour la simulation, filtrer les notes en mémoire
+      let filteredNotes = response.data;
+      
+      // Filtrer par classe
+      if (selectedClasse) {
+        filteredNotes = filteredNotes.filter(note => {
+          const etudiant = etudiants.find(e => e.id === note.etudiant);
+          return etudiant && etudiant.classe && etudiant.classe.id.toString() === selectedClasse;
+  
+const loadInitialData = async () => {
+setLoading(true);
+try {
+// Note: Nous n'utilisons plus les appels API car ils retournent du HTML au lieu de JSON
+// Tout est maintenant géré avec des données statiques dans le useEffect
+  
+// Sélectionner automatiquement la première classe
+setSelectedClasse('1'); // ID de la première classe
+// Sélectionner automatiquement la première matière
+setSelectedMatiere('1'); // ID de la première matière
+// Sélectionner automatiquement le premier professeur
+setSelectedProfesseur('1'); // ID du premier professeur
+    setPage(0);
+  };
+  
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    
+    if (name === 'classe') {
+      setSelectedClasse(value);
+      // Réinitialiser la matière si la classe change
+      setSelectedMatiere('');
+    } else if (name === 'matiere') {
+      setSelectedMatiere(value);
+    } else if (name === 'professeur') {
+      setSelectedProfesseur(value);
+    } else if (name === 'trimestre') {
+      setSelectedTrimestre(value);
+    }
+    
+    // Réinitialiser la pagination lors d'un changement de filtre
+    setPage(0);
+  };
+  
+  const handleOpenNoteDialog = async (note = null) => {
+    // Si aucun étudiant n'est chargé, essayer de les charger
+    if (etudiants.length === 0 && selectedClasse) {
+      console.log('Aucun étudiant chargé, chargement en cours...');
+      await loadEtudiants(selectedClasse);
+    }
+    
+    // Si on édite une note existante
+    if (note) {
+      setEditingNote(note);
+      setNoteForm({
+        etudiant: note.etudiant.toString(),
+        matiere: note.matiere.toString(),
+        professeur: getMatiereTeacher(note.matiere),
+        valeur: note.valeur,
+        date_evaluation: note.date_evaluation,
+        type_evaluation: note.type_evaluation,
+        commentaire: note.commentaire || '',
+        trimestre: note.trimestre
+      });
+    } else {
+      // Nouvelle note
+      setEditingNote(null);
+      
+      // Vérifier si des étudiants sont disponibles
+      if (etudiants.length === 0) {
+        showSnackbar('Aucun étudiant disponible. Veuillez sélectionner une classe contenant des étudiants.', 'warning');
+      }
+      
+      setNoteForm({
+        etudiant: etudiants.length > 0 ? etudiants[0].id.toString() : '',
+        matiere: selectedMatiere || (matieres.length > 0 ? matieres[0].id.toString() : ''),
+        professeur: selectedProfesseur || '',
+        valeur: '',
+        date_evaluation: new Date().toISOString().split('T')[0],
+        type_evaluation: 'Examen',
+        commentaire: '',
+        trimestre: selectedTrimestre
+      });
+    }
+    
+    setOpenNoteDialog(true);
+  };
+  
+  const handleCloseNoteDialog = () => {
+    setOpenNoteDialog(false);
+  };
+  
+  const handleNoteFormChange = (event) => {
+    const { name, value } = event.target;
+    setNoteForm({
+      ...noteForm,
+      [name]: value
+    });
+  };
+  
+  const handleSaveNote = async () => {
+    try {
+      // Valider la note
+      if (!noteForm.etudiant || !noteForm.matiere || !noteForm.valeur) {
+        showSnackbar('Veuillez remplir tous les champs obligatoires', 'error');
+        return;
+      }
+      
+      const noteValue = parseFloat(noteForm.valeur);
+      if (isNaN(noteValue) || noteValue < 0 || noteValue > 20) {
+        showSnackbar('La note doit être comprise entre 0 et 20', 'error');
+        return;
+      }
+      
+      // Préparer les données
+      const noteData = {
+        etudiant: parseInt(noteForm.etudiant),
+        matiere: parseInt(noteForm.matiere),
+        valeur: noteValue,
+        date_evaluation: noteForm.date_evaluation,
+        type_evaluation: noteForm.type_evaluation,
+        commentaire: noteForm.commentaire,
+        trimestre: parseInt(noteForm.trimestre)
+      };
+      
+      // Mettre à jour ou créer la note
+      if (editingNote) {
+        // Mettre à jour
+        const response = await updateNote(editingNote.id, noteData);
+        
+        // Mettre à jour l'état local
+        setNotes(prevNotes => 
+          prevNotes.map(note => 
+            note.id === editingNote.id ? { ...note, ...noteData, id: editingNote.id } : note
+          )
+        );
+        
+        showSnackbar('Note mise à jour avec succès', 'success');
+      } else {
+        // Créer
+        const response = await createNote(noteData);
+        
+        // Simuler l'ID généré par le serveur
+        const newNote = { ...noteData, id: Date.now() };
+        
+        // Mettre à jour l'état local
+        setNotes(prevNotes => [...prevNotes, newNote]);
+        
+        showSnackbar('Note ajoutée avec succès', 'success');
+      }
+      
+      // Fermer la dialog
+      handleCloseNoteDialog();
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de la note:', error);
+      showSnackbar('Erreur lors de l\'enregistrement de la note', 'error');
+    }
+  };
+  
+  const handleDeleteClick = (note) => {
+    setNoteToDelete(note);
+    setOpenDeleteDialog(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    try {
+      if (!noteToDelete) return;
+      
+      // Supprimer la note
+      await deleteNote(noteToDelete.id);
+      
+      // Mettre à jour l'état local
+      setNotes(prevNotes => prevNotes.filter(note => note.id !== noteToDelete.id));
+      
+      showSnackbar('Note supprimée avec succès', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la note:', error);
+      showSnackbar('Erreur lors de la suppression de la note', 'error');
+    } finally {
+      setOpenDeleteDialog(false);
+      setNoteToDelete(null);
+    }
+  };
+  
+  const handleCancelDelete = () => {
+    setOpenDeleteDialog(false);
+    setNoteToDelete(null);
+  };
+  
+  const showSnackbar = (message, severity) => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+  
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
+  };
+  
+  // Fonction utilitaires pour récupérer les noms à partir des IDs
+  const getEtudiantNom = (id) => {
+    const etudiant = etudiants.find(e => e.id === id);
+    return etudiant ? `${etudiant.prenom} ${etudiant.nom}` : 'Étudiant inconnu';
+  };
+  
+  const getMatiereNom = (id) => {
+    const matiere = matieres.find(m => m.id === id);
+    return matiere ? matiere.nom : 'Matière inconnue';
+  };
+  
+  const getClasseNom = (id) => {
+    const classe = classes.find(c => c.id === id);
+    return classe ? classe.nom : 'Classe inconnue';
+  };
+  
+  const getProfesseurNom = (id) => {
+    const professeur = professeurs.find(p => p.id === id);
+    return professeur ? `${professeur.prenom} ${professeur.nom}` : 'Professeur inconnu';
+  };
+  
+  const getMatiereTeacher = (matiereId) => {
+    const matiere = matieres.find(m => m.id === parseInt(matiereId));
+    if (matiere && matiere.professeur) {
+      return matiere.professeur.toString();
+    }
+    return '';
+  };
+  
+  // Calculer la moyenne des notes pour un étudiant donné
+  const calculerMoyenneEtudiant = (etudiantId) => {
+    const etudiantNotes = notes.filter(note => note.etudiant === etudiantId);
+    if (etudiantNotes.length === 0) return 'N/A';
+    
+    const somme = etudiantNotes.reduce((acc, note) => acc + parseFloat(note.valeur), 0);
+    return (somme / etudiantNotes.length).toFixed(2);
+  };
+
+  return (
+    <Box sx={{ padding: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Gestion des notes
+      </Typography>
+      
+      {/* Filtres */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="classe-select-label">Classe</InputLabel>
+              <Select
+                labelId="classe-select-label"
+                id="classe-select"
+                name="classe"
+                value={selectedClasse}
+                label="Classe"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="">Toutes les classes</MenuItem>
+                {classes.map(classe => (
+                  <MenuItem key={classe.id} value={classe.id.toString()}>
+                    {classe.nom}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="matiere-select-label">Matière</InputLabel>
+              <Select
+                labelId="matiere-select-label"
+                id="matiere-select"
+                name="matiere"
+                value={selectedMatiere}
+                label="Matière"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="">Toutes les matières</MenuItem>
+                {matieres.map(matiere => (
+                  <MenuItem key={matiere.id} value={matiere.id.toString()}>
+                    {matiere.nom}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="professeur-select-label">Professeur</InputLabel>
+              <Select
+                labelId="professeur-select-label"
+                id="professeur-select"
+                name="professeur"
+                value={selectedProfesseur}
+                label="Professeur"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="">Tous les professeurs</MenuItem>
+                {professeurs.map(prof => (
+                  <MenuItem key={prof.id} value={prof.id.toString()}>
+                    {prof.prenom} {prof.nom}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="trimestre-select-label">Trimestre</InputLabel>
+              <Select
+                labelId="trimestre-select-label"
+                id="trimestre-select"
+                name="trimestre"
+                value={selectedTrimestre}
+                label="Trimestre"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value={1}>1er Trimestre</MenuItem>
+                <MenuItem value={2}>2ème Trimestre</MenuItem>
+                <MenuItem value={3}>3ème Trimestre</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={1}>
+            <Button 
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenNoteDialog()}
+              fullWidth
+            >
+              Ajouter
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
+      
+      {/* Tableau des notes */}
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              <TableRow>
+                <TableCell>Étudiant</TableCell>
+                <TableCell>Classe</TableCell>
+                <TableCell>Matière</TableCell>
+                <TableCell>Professeur</TableCell>
+                <TableCell>Note</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">
+                    <CircularProgress size={40} />
+                  </TableCell>
+                </TableRow>
+              ) : notes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">
+                    Aucune note trouvée avec les critères sélectionnés.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                notes
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((note) => {
+                    const etudiant = etudiants.find(e => e.id === note.etudiant);
+                    return (
+                      <TableRow key={note.id} hover>
+                        <TableCell>{getEtudiantNom(note.etudiant)}</TableCell>
+                        <TableCell>
+                          {etudiant && etudiant.classe ? getClasseNom(etudiant.classe.id) : 'N/A'}
+                        </TableCell>
+                        <TableCell>{getMatiereNom(note.matiere)}</TableCell>
+                        <TableCell>{getProfesseurNom(getMatiereTeacher(note.matiere))}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={`${parseFloat(note.valeur).toFixed(2)}/20`} 
+                            color={note.valeur >= 10 ? 'success' : 'error'}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>{note.type_evaluation}</TableCell>
+                        <TableCell>{new Date(note.date_evaluation).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Tooltip title="Modifier">
+                            <IconButton size="small" onClick={() => handleOpenNoteDialog(note)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
+                            <IconButton size="small" onClick={() => handleDeleteClick(note)} color="error">
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={notes.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Lignes par page"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
+        />
+      </Paper>
+      
+      {/* Formulaire d'ajout/modification de note */}
+      <Dialog open={openNoteDialog} onClose={handleCloseNoteDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingNote ? 'Modifier une note' : 'Ajouter une note'}
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseNoteDialog}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="etudiant-form-select-label">Étudiant</InputLabel>
+                <Select
+                  labelId="etudiant-form-select-label"
+                  id="etudiant-form-select"
+                  name="etudiant"
+                  value={noteForm.etudiant}
+                  label="Étudiant"
+                  onChange={handleNoteFormChange}
+                >
+                  {etudiants.map(etudiant => (
+                    <MenuItem key={etudiant.id} value={etudiant.id.toString()}>
+                      {etudiant.prenom} {etudiant.nom}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="matiere-form-select-label">Matière</InputLabel>
+                <Select
+                  labelId="matiere-form-select-label"
+                  id="matiere-form-select"
+                  name="matiere"
+                  value={noteForm.matiere}
+                  label="Matière"
+                  onChange={handleNoteFormChange}
+                >
+                  {matieres.map(matiere => (
+                    <MenuItem key={matiere.id} value={matiere.id.toString()}>
+                      {matiere.nom}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Note (/20)"
+                name="valeur"
+                type="number"
+                inputProps={{ min: 0, max: 20, step: 0.25 }}
+                value={noteForm.valeur}
+                onChange={handleNoteFormChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="type-evaluation-select-label">Type d'évaluation</InputLabel>
+                <Select
+                  labelId="type-evaluation-select-label"
+                  id="type-evaluation-select"
+                  name="type_evaluation"
+                  value={noteForm.type_evaluation}
+                  label="Type d'évaluation"
+                  onChange={handleNoteFormChange}
+                >
+                  <MenuItem value="Examen">Examen</MenuItem>
+                  <MenuItem value="Contrôle">Contrôle</MenuItem>
+                  <MenuItem value="TP">TP</MenuItem>
+                  <MenuItem value="Projet">Projet</MenuItem>
+                  <MenuItem value="Oral">Oral</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Date d'évaluation"
+                name="date_evaluation"
+                type="date"
+                value={noteForm.date_evaluation}
+                onChange={handleNoteFormChange}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="trimestre-form-select-label">Trimestre</InputLabel>
+                <Select
+                  labelId="trimestre-form-select-label"
+                  id="trimestre-form-select"
+                  name="trimestre"
+                  value={noteForm.trimestre}
+                  label="Trimestre"
+                  onChange={handleNoteFormChange}
+                >
+                  <MenuItem value={1}>1er Trimestre</MenuItem>
+                  <MenuItem value={2}>2ème Trimestre</MenuItem>
+                  <MenuItem value={3}>3ème Trimestre</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Commentaire"
+                name="commentaire"
+                multiline
+                rows={3}
+                value={noteForm.commentaire}
+                onChange={handleNoteFormChange}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseNoteDialog}>Annuler</Button>
+          <Button onClick={handleSaveNote} variant="contained" startIcon={<SaveIcon />}>
+            Enregistrer
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Dialogue de confirmation de suppression */}
+      <Dialog open={openDeleteDialog} onClose={handleCancelDelete}>
+        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Êtes-vous sûr de vouloir supprimer cette note ?
+            {noteToDelete && (
+              <>
+                <br />
+                <strong>Étudiant:</strong> {getEtudiantNom(noteToDelete.etudiant)}<br />
+                <strong>Note:</strong> {parseFloat(noteToDelete.valeur).toFixed(2)}/20<br />
+                <strong>Type:</strong> {noteToDelete.type_evaluation}
+              </>
+            )}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Annuler</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Supprimer
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Snackbar pour les notifications */}
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};
+
+export default AdminNotes;

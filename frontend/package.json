@@ -20,7 +20,8 @@
     "react-loading-skeleton": "^3.3.1",
     "react-router-dom": "^6.11.2",
     "react-scripts": "^5.0.1",
-    "styled-components": "^6.0.0-rc.1"
+    "styled-components": "^6.0.0-rc.1",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -45,5 +46,5 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8001"
+  "proxy": "http://localhost:8002"
 }

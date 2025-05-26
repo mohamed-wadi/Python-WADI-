@@ -40,6 +40,8 @@ import {
 } from '../../utils/api';
 
 import { NIVEAUX_INGENIEUR } from '../../utils/constants';
+import { STORAGE_KEYS, EVENTS, saveData, loadData, addItem, updateItem, deleteItem, getActiveItems } from '../../utils/localStorageManager';
+import EventBus from '../../utils/eventBus';
 
 const AdminStudents = () => {
   const [etudiants, setEtudiants] = useState([]);
@@ -173,13 +175,19 @@ const AdminStudents = () => {
 
   // Fonction pour sauvegarder les étudiants dans localStorage
   const saveEtudiantsToLocalStorage = (updatedEtudiants) => {
-    localStorage.setItem('schoolAppEtudiants', JSON.stringify(updatedEtudiants));
+    // Utiliser notre gestionnaire de localStorage qui notifie automatiquement les changements
+    saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
   };
   
   // Fonction pour charger les étudiants depuis localStorage
   const loadEtudiantsFromLocalStorage = () => {
-    const savedEtudiants = localStorage.getItem('schoolAppEtudiants');
-    return savedEtudiants ? JSON.parse(savedEtudiants) : null;
+    // Utiliser notre gestionnaire de localStorage qui assure que les données sont toujours un tableau
+    return loadData(STORAGE_KEYS.ETUDIANTS);
+  };
+  
+  // Fonction pour obtenir uniquement les étudiants actifs (non supprimés)
+  const getActiveEtudiants = () => {
+    return getActiveItems(STORAGE_KEYS.ETUDIANTS);
   };
 
   const handleExportExcel = () => {
@@ -350,7 +358,7 @@ const AdminStudents = () => {
           console.error('Erreur API lors de la création:', apiError);
         }
         
-        // Simuler un succès immédiat avec localStorage
+        // Créer un nouvel étudiant dans le système
         const newId = Date.now(); // ID temporaire
         const newEtudiant = {
           id: newId,
@@ -363,15 +371,22 @@ const AdminStudents = () => {
           telephone: formData.telephone || '',
           classe: formData.classe ? parseInt(formData.classe, 10) : null,
           niveau: formData.niveau,
-          numero_matricule: formData.numero_matricule
+          numero_matricule: formData.numero_matricule,
+          deleted: false, // S'assurer que le nouvel étudiant est marqué comme actif
+          created_at: new Date().toISOString() // Ajouter une date de création
         };
         
-        // Mettre à jour l'état local
+        // Ajouter l'étudiant à la liste existante
         const updatedEtudiants = [...etudiants, newEtudiant];
+        
+        // Mettre à jour l'état local
         setEtudiants(updatedEtudiants);
         
-        // Sauvegarder dans localStorage
-        saveEtudiantsToLocalStorage(updatedEtudiants);
+        // Sauvegarder dans localStorage avec notre gestionnaire qui notifie automatiquement
+        saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
+        
+        // Publier un événement spécifique pour notifier les autres composants
+        EventBus.publish(EVENTS.ETUDIANTS_CHANGED, updatedEtudiants);
         showSnackbar('Étudiant ajouté avec succès', 'success');
         
       } else if (formType === 'edit' && currentEtudiant) {
@@ -386,31 +401,35 @@ const AdminStudents = () => {
           console.error('Erreur API lors de la modification:', apiError);
         }
         
-        // Mettre à jour l'étudiant dans la liste locale
-        const updatedEtudiants = etudiants.map(etudiant => {
-          if (etudiant.id === currentEtudiant.id) {
-            return {
-              ...etudiant,
-              nom: formData.nom,
-              prenom: formData.prenom,
-              date_naissance: formData.date_naissance || etudiant.date_naissance,
-              sexe: formData.sexe || etudiant.sexe,
-              adresse: formData.adresse || etudiant.adresse,
-              email: formData.email,
-              telephone: formData.telephone || etudiant.telephone,
-              classe: formData.classe ? parseInt(formData.classe, 10) : etudiant.classe,
-              niveau: formData.niveau || etudiant.niveau,
-              numero_matricule: formData.numero_matricule
-            };
-          }
-          return etudiant;
-        });
+        // Préparer les données mises à jour
+        const updatedEtudiantData = {
+          ...currentEtudiant,
+          nom: formData.nom,
+          prenom: formData.prenom,
+          date_naissance: formData.date_naissance || currentEtudiant.date_naissance,
+          sexe: formData.sexe || currentEtudiant.sexe,
+          adresse: formData.adresse || currentEtudiant.adresse,
+          email: formData.email,
+          telephone: formData.telephone || currentEtudiant.telephone,
+          classe: formData.classe ? parseInt(formData.classe, 10) : currentEtudiant.classe,
+          niveau: formData.niveau || currentEtudiant.niveau,
+          numero_matricule: formData.numero_matricule,
+          updated_at: new Date().toISOString() // Ajouter horodatage de mise à jour
+        };
+        
+        // Mettre à jour l'étudiant dans la liste
+        const updatedEtudiants = etudiants.map(etudiant => 
+          etudiant.id === currentEtudiant.id ? updatedEtudiantData : etudiant
+        );
         
         // Mettre à jour l'état local
         setEtudiants(updatedEtudiants);
         
-        // Sauvegarder dans localStorage
-        saveEtudiantsToLocalStorage(updatedEtudiants);
+        // Sauvegarder dans localStorage avec notre gestionnaire qui notifie automatiquement
+        saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
+        
+        // Publier un événement spécifique pour notifier les autres composants
+        EventBus.publish(EVENTS.ETUDIANTS_CHANGED, updatedEtudiants);
         showSnackbar('Étudiant modifié avec succès', 'success');
       }
       
@@ -464,8 +483,17 @@ const AdminStudents = () => {
           console.error('Erreur API lors de la suppression:', apiError);
         }
         
-        // Supprimer l'étudiant de la liste locale
-        updatedEtudiants = etudiants.filter(etudiant => etudiant.id !== etudiantToDelete.id);
+        // Au lieu de supprimer complètement l'étudiant, on le marque comme supprimé (soft delete)
+        updatedEtudiants = etudiants.map(etudiant => {
+          if (etudiant.id === etudiantToDelete.id) {
+            return {
+              ...etudiant,
+              deleted: true,
+              deleted_at: new Date().toISOString()
+            };
+          }
+          return etudiant;
+        });
         showSnackbar('Étudiant supprimé avec succès', 'success');
         
       } else if (selectedRows.length > 0) {
@@ -482,17 +510,35 @@ const AdminStudents = () => {
           console.error('Erreur API lors de la suppression multiple:', apiError);
         }
         
-        // Supprimer les étudiants sélectionnés de la liste locale
-        updatedEtudiants = etudiants.filter(etudiant => !selectedRows.includes(etudiant.id));
+        // Marquer les étudiants sélectionnés comme supprimés (soft delete)
+        updatedEtudiants = etudiants.map(etudiant => {
+          if (selectedRows.includes(etudiant.id)) {
+            return {
+              ...etudiant,
+              deleted: true,
+              deleted_at: new Date().toISOString()
+            };
+          }
+          return etudiant;
+        });
         showSnackbar(`${selectedRows.length} étudiants supprimés avec succès`, 'success');
         setSelectedRows([]);
       } else {
         return; // Aucun élément à supprimer
       }
       
-      // Mettre à jour l'état et le localStorage
+      // Mettre à jour l'état local
       setEtudiants(updatedEtudiants);
-      saveEtudiantsToLocalStorage(updatedEtudiants);
+      
+      // Sauvegarder dans localStorage avec notre gestionnaire qui notifie automatiquement
+      saveData(STORAGE_KEYS.ETUDIANTS, updatedEtudiants);
+      
+      // Publier un événement spécifique pour notifier les autres composants (comme le tableau de bord)
+      EventBus.publish(EVENTS.ETUDIANTS_CHANGED, updatedEtudiants);
+      
+      // Mettre à jour l'affichage pour montrer uniquement les étudiants actifs
+      const etudiantsActifs = updatedEtudiants.filter(e => !e.deleted);
+      console.log(`${updatedEtudiants.length - etudiantsActifs.length} étudiants supprimés (masqués).`);
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
       showSnackbar('Erreur lors de la suppression', 'error');
