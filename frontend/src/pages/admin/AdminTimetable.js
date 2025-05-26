@@ -45,7 +45,30 @@ import {
   fetchMatieres
 } from '../../utils/api';
 
+import { NIVEAUX_INGENIEUR, JOURS_SEMAINE, HEURES_JOURNEE } from '../../utils/constants';
+
 // Fonctions pour gérer les données dans localStorage
+const loadClassesFromLocalStorage = () => {
+  try {
+    // Utiliser la même clé que dans AdminClasses.js
+    const savedClasses = localStorage.getItem('schoolAppClasses');
+    // En cas d'échec, essayer la sauvegarde
+    const backupClasses = localStorage.getItem('schoolAppClasses_backup');
+    
+    if (savedClasses) {
+      console.log('Chargement des classes depuis localStorage pour l\'emploi du temps');
+      return JSON.parse(savedClasses);
+    } else if (backupClasses) {
+      console.log('Chargement des classes depuis la sauvegarde pour l\'emploi du temps');
+      return JSON.parse(backupClasses);
+    }
+    return null;
+  } catch (error) {
+    console.error('Erreur lors du chargement des classes depuis localStorage:', error);
+    return null;
+  }
+};
+
 const loadProfesseursFromLocalStorage = () => {
   try {
     // Utiliser la même clé que dans AdminProfessors.js
@@ -96,11 +119,13 @@ const HEURES = Array.from({ length: 11 }, (_, i) => ({
   value: `${(i + 8).toString().padStart(2, '0')}:00:00`
 }));
 
-// Données statiques pour le fallback
+// Données statiques pour le fallback (utilisant les mêmes niveaux d'ingénieur)
 const staticClasses = [
-  { id: 1, nom: 'Terminale S', niveau: 'Terminale', annee_scolaire: '2023-2024' },
-  { id: 2, nom: 'Première ES', niveau: 'Première', annee_scolaire: '2023-2024' },
-  { id: 3, nom: 'Seconde A', niveau: 'Seconde', annee_scolaire: '2023-2024' }
+  { id: 1, nom: 'Classe ING1-A', niveau: '1', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+  { id: 2, nom: 'Classe ING2-A', niveau: '2', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+  { id: 3, nom: 'Classe ING3-A', niveau: '3', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+  { id: 4, nom: 'Classe ING4-A', niveau: '4', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+  { id: 5, nom: 'Classe ING5-A', niveau: '5', annee_scolaire: '2024-2025', nb_etudiants: 0 }
 ];
 
 const staticProfesseurs = [
@@ -153,6 +178,7 @@ const AdminTimetable = () => {
   
   const [viewMode, setViewMode] = useState('classe'); // 'classe' ou 'professeur'
   const [selectedEntity, setSelectedEntity] = useState('');
+  const [selectedNiveau, setSelectedNiveau] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
   
   // États pour le formulaire
@@ -162,6 +188,7 @@ const AdminTimetable = () => {
     matiere: '',
     professeur: '',
     classe: '',
+    niveau: '', // Ajout du niveau
     jour: '',
     heure_debut: '',
     heure_fin: '',
@@ -234,14 +261,18 @@ const AdminTimetable = () => {
           matieres: matieresResponse 
         });
         
-        // Charger les classes depuis l'API ou utiliser les données statiques
-        if (classesResponse.status === 'fulfilled' && Array.isArray(classesResponse.value.data)) {
+        // Charger les classes depuis localStorage en priorité absolue
+        const localClasses = loadClassesFromLocalStorage();
+        if (localClasses && localClasses.length > 0) {
+          console.log('Classes chargées depuis localStorage pour l\'emploi du temps');
+          setClasses(localClasses);
+        } else if (classesResponse.status === 'fulfilled' && Array.isArray(classesResponse.value.data)) {
           console.log('Classes chargées depuis l\'API');
           setClasses(classesResponse.value.data);
         } else {
           console.log('Utilisation des classes statiques');
           setClasses(staticClasses);
-          localStorage.setItem('schoolAppClasses', JSON.stringify(staticClasses));
+          // Ne pas écraser les classes dans localStorage pour éviter les conflits avec AdminClasses.js
         }
         
         // Charger les professeurs depuis localStorage en priorité
@@ -279,7 +310,7 @@ const AdminTimetable = () => {
         setClasses(staticClasses);
         setProfesseurs(staticProfesseurs);
         setMatieres(staticMatieres);
-        localStorage.setItem('schoolAppClasses', JSON.stringify(staticClasses));
+        // Ne pas écraser les classes dans localStorage pour éviter les conflits avec AdminClasses.js
         localStorage.setItem('schoolAppProfesseurs', JSON.stringify(staticProfesseurs));
         localStorage.setItem('schoolAppMatieres', JSON.stringify(staticMatieres));
       }
@@ -355,20 +386,48 @@ const handleCloseForm = () => {
 
 const handleInputChange = (e) => {
   const { name, value } = e.target;
-  setFormData(prev => ({
-    ...prev,
-    [name]: value
-  }));
+  
+  // Si le niveau change, réinitialiser la classe sélectionnée
+  if (name === 'niveau') {
+    // Vérifier si une classe du nouveau niveau existe
+    const classesNiveau = classes.filter(c => c.niveau === value);
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      // Réinitialiser la classe si aucune classe n'est disponible pour ce niveau
+      // ou si la classe actuelle n'est pas du niveau sélectionné
+      classe: classesNiveau.length > 0 ? 
+        (classesNiveau.find(c => c.id.toString() === prev.classe) ? prev.classe : classesNiveau[0].id.toString()) : 
+        ''
+    }));
+  } else {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }
 };
 
 const validateForm = () => {
   const errors = {};
   if (!formData.matiere) errors.matiere = 'La matière est obligatoire';
   if (!formData.professeur) errors.professeur = 'Le professeur est obligatoire';
+  if (!formData.niveau) errors.niveau = 'Le niveau est obligatoire';
   if (!formData.classe) errors.classe = 'La classe est obligatoire';
   if (!formData.jour) errors.jour = 'Le jour est obligatoire';
   if (!formData.heure_debut) errors.heure_debut = 'L\'heure de début est obligatoire';
   if (!formData.heure_fin) errors.heure_fin = 'L\'heure de fin est obligatoire';
+  
+  // Vérifier que le professeur enseigne au niveau sélectionné
+  const professeurSelected = professeurs.find(p => p.id === parseInt(formData.professeur));
+  if (professeurSelected && formData.niveau) {
+    const niveauxProf = professeurSelected.niveaux || [];
+    if (!niveauxProf.includes(formData.niveau)) {
+      errors.professeur = 'Ce professeur n\'enseigne pas à ce niveau';
+    }
+  }
+  
   setFormErrors(errors);
   return Object.keys(errors).length === 0;
 };
@@ -385,6 +444,7 @@ const handleSubmitForm = async () => {
       matiere: parseInt(formData.matiere),
       professeur: parseInt(formData.professeur),
       classe: parseInt(formData.classe),
+      niveau: formData.niveau,
       jour: formData.jour,
       heure_debut: formData.heure_debut,
       heure_fin: formData.heure_fin,
@@ -510,9 +570,16 @@ const handleEntityChange = (event) => {
   setSelectedEntity(event.target.value);
 };
 
-// Filtrer les cours selon le mode de vue et l'entité sélectionnée
+// Filtrer les cours selon le mode de vue, l'entité sélectionnée et le niveau
 const filteredCours = Array.isArray(cours) ? cours.filter(c => {
   if (!c || (typeof c !== 'object')) return false;
+  
+  // Filtre de niveau (prioritaire)
+  if (selectedNiveau && c.niveau !== selectedNiveau) {
+    return false;
+  }
+  
+  // Filtres par entité (classe ou professeur)
   if (viewMode === 'classe') {
     return String(c.classe) === selectedEntity;
   } else {
@@ -531,6 +598,7 @@ const renderTimetable = () => {
               <TableCell>Matière</TableCell>
               {viewMode === 'classe' && <TableCell>Professeur</TableCell>}
               {viewMode === 'professeur' && <TableCell>Classe</TableCell>}
+              <TableCell>Niveau</TableCell>
               <TableCell>Salle</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -544,6 +612,11 @@ const renderTimetable = () => {
                   <TableCell>{c.matiere_nom}</TableCell>
                   {viewMode === 'classe' && <TableCell>{c.professeur_nom}</TableCell>}
                   {viewMode === 'professeur' && <TableCell>{c.classe_nom}</TableCell>}
+                  <TableCell>
+                    {c.niveau ? (
+                      NIVEAUX_INGENIEUR.find(n => n.id.toString() === c.niveau.toString())?.nom || c.niveau
+                    ) : 'Non défini'}
+                  </TableCell>
                   <TableCell>{c.salle}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => handleOpenForm('edit', c)}>
@@ -601,6 +674,36 @@ return (
       </Button>
     </Box>
     
+    <Box sx={{ mb: 2 }}>
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="niveau-select-label">Sélectionner un niveau</InputLabel>
+        <Select
+          labelId="niveau-select-label"
+          value={selectedNiveau}
+          label="Sélectionner un niveau"
+          onChange={(e) => {
+            setSelectedNiveau(e.target.value);
+            // Filtrer les professeurs qui enseignent à ce niveau
+            if (viewMode === 'professeur' && professeurs.length > 0) {
+              const profsNiveau = professeurs.filter(p => 
+                p.niveaux && p.niveaux.includes(e.target.value)
+              );
+              if (profsNiveau.length > 0) {
+                setSelectedEntity(profsNiveau[0].id.toString());
+              }
+            }
+          }}
+        >
+          <MenuItem value="">Tous les niveaux</MenuItem>
+          {NIVEAUX_INGENIEUR.map(niveau => (
+            <MenuItem key={niveau.id} value={niveau.id.toString()}>
+              {niveau.nom}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Box>
+    
     <Tabs value={selectedTab} onChange={handleTabChange} sx={{ mb: 2 }}>
       <Tab label="Vue par classe" />
       <Tab label="Vue par professeur" />
@@ -618,11 +721,20 @@ return (
           onChange={handleEntityChange}
         >
           {viewMode === 'classe' ? (
-            classes.map(classe => (
-              <MenuItem key={classe.id} value={classe.id.toString()}>
-                {classe.nom} ({classe.niveau})
-              </MenuItem>
-            ))
+            // Filtrer les classes par niveau si un niveau est sélectionné
+            classes
+              .filter(classe => !selectedNiveau || classe.niveau === selectedNiveau)
+              .map(classe => {
+                // Récupérer le nom du niveau au lieu de l'ID
+                const niveauObj = NIVEAUX_INGENIEUR.find(n => n.id.toString() === classe.niveau);
+                const niveauNom = niveauObj ? niveauObj.nom : classe.niveau;
+                
+                return (
+                  <MenuItem key={classe.id} value={classe.id.toString()}>
+                    {classe.nom} ({niveauNom})
+                  </MenuItem>
+                );
+              })
           ) : (
             professeurs.map(prof => (
               <MenuItem key={prof.id} value={prof.id.toString()}>
@@ -688,6 +800,25 @@ return (
             </FormControl>
           </Grid>
           <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={Boolean(formErrors.niveau)}>
+              <InputLabel id="niveau-label">Niveau</InputLabel>
+              <Select
+                labelId="niveau-label"
+                name="niveau"
+                value={formData.niveau}
+                onChange={handleInputChange}
+                label="Niveau"
+              >
+                {NIVEAUX_INGENIEUR.map(niveau => (
+                  <MenuItem key={niveau.id} value={niveau.id.toString()}>
+                    {niveau.nom}
+                  </MenuItem>
+                ))}
+              </Select>
+              {formErrors.niveau && <Typography color="error" variant="caption">{formErrors.niveau}</Typography>}
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth error={Boolean(formErrors.classe)}>
               <InputLabel id="classe-label">Classe</InputLabel>
               <Select
@@ -698,11 +829,19 @@ return (
                 label="Classe"
                 // Nous permettons maintenant la sélection de la classe même en mode vue par classe
               >
-                {classes.map(classe => (
-                  <MenuItem key={classe.id} value={classe.id.toString()}>
-                    {classe.nom}
-                  </MenuItem>
-                ))}
+                {classes
+                  .filter(classe => !formData.niveau || classe.niveau === formData.niveau)
+                  .map(classe => {
+                    // Récupérer le nom du niveau au lieu de l'ID
+                    const niveauObj = NIVEAUX_INGENIEUR.find(n => n.id.toString() === classe.niveau);
+                    const niveauNom = niveauObj ? niveauObj.nom : classe.niveau;
+                    
+                    return (
+                      <MenuItem key={classe.id} value={classe.id.toString()}>
+                        {classe.nom} ({niveauNom})
+                      </MenuItem>
+                    );
+                  })}
               </Select>
               {formErrors.classe && <Typography color="error" variant="caption">{formErrors.classe}</Typography>}
             </FormControl>

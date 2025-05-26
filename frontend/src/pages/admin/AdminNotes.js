@@ -41,6 +41,8 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 
+import { NIVEAUX_INGENIEUR, TYPES_EVALUATION } from '../../utils/constants';
+
 const AdminNotes = () => {
   // États pour les données
   const [classes, setClasses] = useState([
@@ -77,6 +79,7 @@ const AdminNotes = () => {
   ]);
   
   // États pour les filtres
+  const [selectedNiveau, setSelectedNiveau] = useState('');
   const [selectedClasse, setSelectedClasse] = useState('1');
   const [selectedMatiere, setSelectedMatiere] = useState('');
   const [selectedProfesseur, setSelectedProfesseur] = useState('');
@@ -89,6 +92,7 @@ const AdminNotes = () => {
     etudiant: '',
     matiere: '',
     professeur: '',
+    niveau: '',
     valeur: '',
     date_evaluation: new Date().toISOString().split('T')[0],
     type_evaluation: 'Examen',
@@ -199,6 +203,18 @@ const AdminNotes = () => {
   const filteredNotes = notes.filter(note => {
     let match = true;
     
+    // Filtrer par niveau (prioritaire)
+    if (selectedNiveau) {
+      // Vérifier le niveau de l'étudiant
+      const etudiant = etudiants.find(e => e.id === note.etudiant);
+      match = match && etudiant && etudiant.niveau === selectedNiveau;
+
+      // Si la note a son propre niveau, vérifier également
+      if (note.niveau) {
+        match = match && note.niveau === selectedNiveau;
+      }
+    }
+    
     // Filtrer par classe
     if (selectedClasse) {
       const etudiant = etudiants.find(e => e.id === note.etudiant);
@@ -213,6 +229,14 @@ const AdminNotes = () => {
     // Filtrer par professeur
     if (selectedProfesseur) {
       match = match && note.professeur === parseInt(selectedProfesseur);
+      
+      // Vérifier que le professeur enseigne à ce niveau
+      if (selectedNiveau && match) {
+        const prof = professeurs.find(p => p.id === parseInt(selectedProfesseur));
+        if (prof && prof.niveaux) {
+          match = match && prof.niveaux.includes(selectedNiveau);
+        }
+      }
     }
     
     // Filtrer par trimestre
@@ -240,7 +264,25 @@ const AdminNotes = () => {
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
     
-    if (name === 'classe') {
+    if (name === 'niveau') {
+      setSelectedNiveau(value);
+      
+      // Si on change le niveau, on peut filtrer les professeurs qui enseignent à ce niveau
+      if (value && professeurs.length > 0) {
+        const profsNiveau = professeurs.filter(p => 
+          p.niveaux && p.niveaux.includes(value)
+        );
+        // Mettre à jour le filtre des professeurs si nécessaire
+        if (profsNiveau.length > 0 && selectedProfesseur) {
+          const profActuel = professeurs.find(p => p.id.toString() === selectedProfesseur);
+          if (profActuel && (!profActuel.niveaux || !profActuel.niveaux.includes(value))) {
+            setSelectedProfesseur(''); // Réinitialiser si le prof actuel n'enseigne pas à ce niveau
+          }
+        }
+      }
+      
+      setPage(0);
+    } else if (name === 'classe') {
       setSelectedClasse(value);
       setPage(0);
     } else if (name === 'matiere') {
@@ -264,6 +306,7 @@ const AdminNotes = () => {
         etudiant: note.etudiant.toString(),
         matiere: note.matiere.toString(),
         professeur: note.professeur.toString(),
+        niveau: note.niveau || selectedNiveau || '',
         valeur: note.valeur.toString(),
         date_evaluation: note.date_evaluation,
         type_evaluation: note.type_evaluation,
@@ -283,6 +326,7 @@ const AdminNotes = () => {
         etudiant: etudiants.length > 0 ? etudiants[0].id.toString() : '',
         matiere: selectedMatiere || (matieres.length > 0 ? matieres[0].id.toString() : ''),
         professeur: selectedProfesseur || '1',
+        niveau: selectedNiveau || '',
         valeur: '',
         date_evaluation: new Date().toISOString().split('T')[0],
         type_evaluation: 'Examen',
@@ -324,6 +368,7 @@ const AdminNotes = () => {
         etudiant: parseInt(noteForm.etudiant),
         matiere: parseInt(noteForm.matiere),
         professeur: parseInt(noteForm.professeur),
+        niveau: noteForm.niveau,
         trimestre: parseInt(noteForm.trimestre)
       };
       
@@ -464,7 +509,27 @@ const AdminNotes = () => {
         <Typography variant="h6" gutterBottom>
           Filtres
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={2} sx={{ p: 2 }}>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel id="niveau-select-label">Niveau</InputLabel>
+              <Select
+                labelId="niveau-select-label"
+                id="niveau-select"
+                name="niveau"
+                value={selectedNiveau}
+                label="Niveau"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="">Tous les niveaux</MenuItem>
+                {NIVEAUX_INGENIEUR.map((niveau) => (
+                  <MenuItem key={niveau.id} value={niveau.id.toString()}>
+                    {niveau.nom}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
           <Grid item xs={12} sm={3}>
             <FormControl fullWidth>
               <InputLabel id="classe-select-label">Classe</InputLabel>
@@ -623,6 +688,7 @@ const AdminNotes = () => {
                 <TableCell>Étudiant</TableCell>
                 <TableCell>Matière</TableCell>
                 <TableCell>Professeur</TableCell>
+                <TableCell>Niveau</TableCell>
                 <TableCell>Note</TableCell>
                 <TableCell>Type</TableCell>
                 <TableCell>Date</TableCell>
@@ -649,6 +715,13 @@ const AdminNotes = () => {
                     <TableCell>{getEtudiantNom(note.etudiant)}</TableCell>
                     <TableCell>{getMatiereNom(note.matiere)}</TableCell>
                     <TableCell>{getProfesseurNom(note.professeur)}</TableCell>
+                    <TableCell>
+                      {note.niveau ? (
+                        NIVEAUX_INGENIEUR.find(n => n.id.toString() === note.niveau)?.nom || 'Niveau ' + note.niveau
+                      ) : (
+                        'Non défini'
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Chip 
                         label={`${parseFloat(note.valeur).toFixed(2)}/20`} 
@@ -720,6 +793,25 @@ const AdminNotes = () => {
                         {etudiant.prenom} {etudiant.nom}
                       </MenuItem>
                     ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="niveau-form-select-label">Niveau</InputLabel>
+                <Select
+                  labelId="niveau-form-select-label"
+                  id="niveau-form-select"
+                  name="niveau"
+                  value={noteForm.niveau}
+                  label="Niveau"
+                  onChange={handleNoteFormChange}
+                >
+                  {NIVEAUX_INGENIEUR.map((niveau) => (
+                    <MenuItem key={niveau.id} value={niveau.id.toString()}>
+                      {niveau.nom}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>

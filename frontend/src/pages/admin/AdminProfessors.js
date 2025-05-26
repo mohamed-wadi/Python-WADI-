@@ -13,7 +13,14 @@ import {
   IconButton,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  OutlinedInput,
+  FormHelperText
 } from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { 
@@ -29,6 +36,8 @@ import {
   deleteProfesseur
 } from '../../utils/api';
 
+import { NIVEAUX_INGENIEUR } from '../../utils/constants';
+
 // Utilisation des API REST pour la gestion des professeurs avec fallback localStorage
 
 const AdminProfessors = () => {
@@ -43,7 +52,8 @@ const AdminProfessors = () => {
     email: '',
     telephone: '',
     specialite: '',
-    date_embauche: ''
+    date_embauche: '',
+    niveaux: [] // Tableau pour stocker les niveaux d'enseignement
   });
   const [openConfirm, setOpenConfirm] = useState(false);
   const [professeurToDelete, setProfesseurToDelete] = useState(null);
@@ -138,7 +148,8 @@ const AdminProfessors = () => {
       setCurrentProfesseur(professeur);
       setFormData({
         ...professeur,
-        date_embauche: professeur.date_embauche || ''
+        date_embauche: professeur.date_embauche || '',
+        niveaux: professeur.niveaux || []
       });
     } else {
       // Réinitialiser le formulaire pour la création
@@ -149,7 +160,8 @@ const AdminProfessors = () => {
         email: '',
         telephone: '',
         specialite: '',
-        date_embauche: ''
+        date_embauche: '',
+        niveaux: []
       });
     }
     
@@ -175,6 +187,22 @@ const AdminProfessors = () => {
       });
     }
   };
+  
+  // Gestion spécifique pour la sélection multiple des niveaux
+  const handleNiveauxChange = (event) => {
+    const { value } = event.target;
+    setFormData({
+      ...formData,
+      niveaux: typeof value === 'string' ? value.split(',') : value
+    });
+    
+    if (formErrors.niveaux) {
+      setFormErrors({
+        ...formErrors,
+        niveaux: ''
+      });
+    }
+  };
 
   const validateForm = () => {
     const errors = {};
@@ -184,6 +212,7 @@ const AdminProfessors = () => {
     if (!formData.email) errors.email = 'L\'email est requis';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Format d\'email invalide';
     if (!formData.specialite) errors.specialite = 'La spécialité est requise';
+    if (!formData.niveaux || formData.niveaux.length === 0) errors.niveaux = 'Sélectionnez au moins un niveau d\'enseignement';
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -355,6 +384,30 @@ const AdminProfessors = () => {
     { field: 'telephone', headerName: 'Téléphone', width: 130 },
     { field: 'specialite', headerName: 'Spécialité', width: 150 },
     { field: 'date_embauche', headerName: 'Date d\'embauche', width: 150 },
+    { 
+      field: 'niveaux', 
+      headerName: 'Niveaux d\'enseignement', 
+      width: 200,
+      renderCell: (params) => {
+        const niveauxIds = params.value || [];
+        return (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {niveauxIds.map(id => {
+              const niveau = NIVEAUX_INGENIEUR.find(n => n.id.toString() === id.toString());
+              return niveau ? (
+                <Chip 
+                  key={id} 
+                  label={niveau.nom} 
+                  size="small" 
+                  color="primary" 
+                  variant="outlined" 
+                />
+              ) : null;
+            })}
+          </Box>
+        );
+      }
+    },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -517,6 +570,48 @@ const AdminProfessors = () => {
                 fullWidth
                 InputLabelProps={{ shrink: true }}
               />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl 
+                fullWidth 
+                error={Boolean(formErrors.niveaux)}
+                required
+              >
+                <InputLabel id="niveaux-label">Niveaux d'enseignement</InputLabel>
+                <Select
+                  labelId="niveaux-label"
+                  id="niveaux"
+                  multiple
+                  name="niveaux"
+                  value={formData.niveaux || []}
+                  onChange={handleNiveauxChange}
+                  input={<OutlinedInput id="select-niveaux" label="Niveaux d'enseignement" />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const niveau = NIVEAUX_INGENIEUR.find(n => n.id.toString() === value.toString());
+                        return (
+                          <Chip 
+                            key={value} 
+                            label={niveau ? niveau.nom : value} 
+                            color="primary" 
+                            variant="outlined" 
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                >
+                  {NIVEAUX_INGENIEUR.map((niveau) => (
+                    <MenuItem key={niveau.id} value={niveau.id.toString()}>
+                      {niveau.nom}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {Boolean(formErrors.niveaux) && (
+                  <FormHelperText>{formErrors.niveaux}</FormHelperText>
+                )}
+              </FormControl>
             </Grid>
           </Grid>
         </DialogContent>

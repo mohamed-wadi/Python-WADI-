@@ -39,6 +39,8 @@ import {
   fetchClasses 
 } from '../../utils/api';
 
+import { NIVEAUX_INGENIEUR } from '../../utils/constants';
+
 const AdminStudents = () => {
   const [etudiants, setEtudiants] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -55,6 +57,7 @@ const AdminStudents = () => {
     email: '',
     telephone: '',
     classe: '',
+    niveau: '', // Nouveau champ pour le niveau d'étudiant
     numero_matricule: ''
   });
   const [openConfirm, setOpenConfirm] = useState(false);
@@ -300,6 +303,7 @@ const AdminStudents = () => {
     else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Format d\'email invalide';
     if (!formData.numero_matricule) errors.numero_matricule = 'Le numéro de matricule est requis';
     if (!formData.classe) errors.classe = 'La classe est requise';
+    if (!formData.niveau) errors.niveau = 'Le niveau est requis';
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -319,6 +323,7 @@ const AdminStudents = () => {
         email: formData.email || '',
         telephone: formData.telephone || '',
         classe: formData.classe || null,
+        niveau: formData.niveau || null,
         numero_matricule: formData.numero_matricule || ''
       };
       
@@ -357,6 +362,7 @@ const AdminStudents = () => {
           email: formData.email,
           telephone: formData.telephone || '',
           classe: formData.classe ? parseInt(formData.classe, 10) : null,
+          niveau: formData.niveau,
           numero_matricule: formData.numero_matricule
         };
         
@@ -393,6 +399,7 @@ const AdminStudents = () => {
               email: formData.email,
               telephone: formData.telephone || etudiant.telephone,
               classe: formData.classe ? parseInt(formData.classe, 10) : etudiant.classe,
+              niveau: formData.niveau || etudiant.niveau,
               numero_matricule: formData.numero_matricule
             };
           }
@@ -759,6 +766,29 @@ const AdminStudents = () => {
                   {formErrors.classe && (
                     <Typography color="error" variant="caption">
                       {formErrors.classe}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required error={Boolean(formErrors.niveau)}>
+                  <InputLabel id="niveau-label">Niveau</InputLabel>
+                  <Select
+                    labelId="niveau-label"
+                    name="niveau"
+                    value={formData.niveau}
+                    onChange={handleInputChange}
+                    label="Niveau"
+                  >
+                    {NIVEAUX_INGENIEUR.map((niveau) => (
+                      <MenuItem key={niveau.id} value={niveau.id.toString()}>
+                        {niveau.nom}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formErrors.niveau && (
+                    <Typography color="error" variant="caption">
+                      {formErrors.niveau}
                     </Typography>
                   )}
                 </FormControl>

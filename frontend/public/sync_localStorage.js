@@ -78,7 +78,22 @@
     }
   }
   
-  // 6. Créer des données statiques si aucune donnée n'est disponible
+  // 6. S'assurer que les données des classes ne sont pas écrasées au rechargement
+  const savedCoursesData = localStorage.getItem('saved_courses');
+  
+  // Vérifier si les données des classes sont en risque d'être perdues
+  if (classes) {
+    // Sauvegarder une copie de secours des classes
+    localStorage.setItem('schoolAppClasses_backup', classes);
+    console.log('Sauvegarde des classes effectuée');
+  } else if (localStorage.getItem('schoolAppClasses_backup')) {
+    // Restaurer depuis la sauvegarde si nécessaire
+    const backupClasses = localStorage.getItem('schoolAppClasses_backup');
+    localStorage.setItem('schoolAppClasses', backupClasses);
+    console.log('Classes restaurées depuis la sauvegarde');
+  }
+  
+  // 7. Créer des données statiques si aucune donnée n'est disponible
   if (!professeurs || professeursParsed.length === 0) {
     console.log('Aucune donnée de professeurs trouvée, création de données statiques...');
     const staticProfesseurs = [

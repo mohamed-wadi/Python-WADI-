@@ -14,7 +14,11 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  Chip
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { 
@@ -30,6 +34,8 @@ import {
   updateClasse, 
   deleteClasse,
 } from '../../utils/api';
+
+import { NIVEAUX_INGENIEUR } from '../../utils/constants';
 
 // Utilisation des API REST pour la gestion des classes avec fallback localStorage
 
@@ -56,7 +62,16 @@ const AdminClasses = () => {
   
   // Fonction pour sauvegarder les classes dans localStorage
   const saveClassesToLocalStorage = (updatedClasses) => {
+    // Sauvegarder dans toutes les clés potentielles pour éviter les conflits
     localStorage.setItem('schoolAppClasses', JSON.stringify(updatedClasses));
+    localStorage.setItem('schoolAppClasses_backup', JSON.stringify(updatedClasses));
+    
+    // Supprimer toute copie dans d'autres composants qui pourrait causer des conflits
+    localStorage.removeItem('classes');
+    
+    // Message de débogage pour tracer les opérations sur le localStorage
+    console.log('IMPORTANT: Classes sauvegardées dans localStorage:', updatedClasses);
+    console.log('Nombre de classes actuelles:', updatedClasses.length);
   };
   
   // Fonction pour charger les classes depuis localStorage
@@ -66,7 +81,23 @@ const AdminClasses = () => {
   };
 
   useEffect(() => {
+    // Charger les données au démarrage
     loadData();
+    
+    // Ajouter un écouteur d'événements pour recharger les données à chaque rafraîchissement
+    const handleBeforeUnload = () => {
+      // S'assurer que les modifications sont enregistrées avant le rafraîchissement
+      const currentClasses = loadClassesFromLocalStorage();
+      if (currentClasses && currentClasses.length > 0) {
+        console.log('Sauvegarde des classes avant rafraîchissement:', currentClasses);
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   const loadData = async () => {
@@ -75,48 +106,37 @@ const AdminClasses = () => {
       // D'abord, essayer de charger les classes depuis le localStorage
       const savedClasses = loadClassesFromLocalStorage();
       
-      // Si des classes existent dans localStorage, les utiliser
+      // Si des classes existent dans localStorage, les utiliser TOUJOURS
       if (savedClasses && savedClasses.length > 0) {
         console.log('Chargement des classes depuis localStorage', savedClasses);
         setClasses(savedClasses);
       } else {
-        // Sinon, essayer de les charger depuis l'API
+        // Sinon seulement, initialiser avec des données par défaut
+        // Définir des données statiques pour les classes (avec des niveaux conformes)
+        const staticClasses = [
+          { id: 1, nom: 'Classe ING1-A', niveau: '1', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+          { id: 2, nom: 'Classe ING2-A', niveau: '2', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+          { id: 3, nom: 'Classe ING3-A', niveau: '3', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+          { id: 4, nom: 'Classe ING4-A', niveau: '4', annee_scolaire: '2024-2025', nb_etudiants: 0 },
+          { id: 5, nom: 'Classe ING5-A', niveau: '5', annee_scolaire: '2024-2025', nb_etudiants: 0 }
+        ];
+        
         try {
-          // Définir des données statiques pour les classes
-          const staticClasses = [
-            { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025', nb_etudiants: 2 },
-            { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025', nb_etudiants: 1 },
-            { id: 3, nom: 'Terminale S', niveau: 'Terminale', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-            { id: 4, nom: 'Première ES', niveau: 'Première', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-            { id: 5, nom: 'Seconde A', niveau: 'Seconde', annee_scolaire: '2024-2025', nb_etudiants: 0 }
-          ];
-          
+          // Tenter de charger depuis l'API comme solution secondaire
           const response = await fetchClasses();
           
-          if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
-            console.error('API a retourné du HTML au lieu de JSON pour les classes');
-            setClasses(staticClasses);
-            saveClassesToLocalStorage(staticClasses);
-          } else if (Array.isArray(response.data)) {
+          if (Array.isArray(response.data) && response.data.length > 0) {
             console.log('Données de classes récupérées depuis l\'API');
             setClasses(response.data);
             saveClassesToLocalStorage(response.data);
           } else {
-            console.error('Format de données inattendu');
+            console.log('Initialisation avec des classes par défaut');
             setClasses(staticClasses);
             saveClassesToLocalStorage(staticClasses);
           }
         } catch (apiError) {
           console.error('Erreur lors du chargement des classes depuis l\'API:', apiError);
-          
-          // Données statiques en cas d'erreur
-          const staticClasses = [
-            { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025', nb_etudiants: 2 },
-            { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025', nb_etudiants: 1 },
-            { id: 3, nom: 'Terminale S', niveau: 'Terminale', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-            { id: 4, nom: 'Première ES', niveau: 'Première', annee_scolaire: '2024-2025', nb_etudiants: 0 },
-            { id: 5, nom: 'Seconde A', niveau: 'Seconde', annee_scolaire: '2024-2025', nb_etudiants: 0 }
-          ];
+          console.log('Initialisation avec des classes par défaut');
           setClasses(staticClasses);
           saveClassesToLocalStorage(staticClasses);
         }
@@ -365,7 +385,16 @@ const AdminClasses = () => {
   // Colonnes pour le DataGrid
   const columns = [
     { field: 'nom', headerName: 'Nom', width: 200 },
-    { field: 'niveau', headerName: 'Niveau', width: 150 },
+    { 
+      field: 'niveau', 
+      headerName: 'Niveau', 
+      width: 150,
+      renderCell: (params) => {
+        const niveauId = params.value;
+        const niveau = NIVEAUX_INGENIEUR.find(n => n.id.toString() === niveauId);
+        return niveau ? niveau.nom : niveauId;
+      }
+    },
     { field: 'annee_scolaire', headerName: 'Année scolaire', width: 150 },
     { 
       field: 'nombre_etudiants', 
@@ -482,17 +511,28 @@ const AdminClasses = () => {
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField
-                name="niveau"
-                label="Niveau"
-                value={formData.niveau}
-                onChange={handleInputChange}
-                fullWidth
-                required
-                error={Boolean(formErrors.niveau)}
-                helperText={formErrors.niveau}
-                placeholder="ex: Seconde, Terminale, CM2..."
-              />
+              <FormControl fullWidth required error={Boolean(formErrors.niveau)}>
+                <InputLabel id="niveau-select-label">Niveau</InputLabel>
+                <Select
+                  labelId="niveau-select-label"
+                  id="niveau-select"
+                  name="niveau"
+                  value={formData.niveau}
+                  onChange={handleInputChange}
+                  label="Niveau"
+                >
+                  {NIVEAUX_INGENIEUR.map((niveau) => (
+                    <MenuItem key={niveau.id} value={niveau.id.toString()}>
+                      {niveau.nom}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {formErrors.niveau && (
+                  <Typography color="error" variant="caption">
+                    {formErrors.niveau}
+                  </Typography>
+                )}
+              </FormControl>
             </Grid>
             <Grid item xs={12}>
               <TextField
