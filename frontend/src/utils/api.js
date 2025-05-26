@@ -1,12 +1,43 @@
 import axios from 'axios';
 
+// Fonction pour obtenir le cookie CSRF
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 // Create a base axios instance with configurations
 const api = axios.create({
-  baseURL: 'http://localhost:8001/api',
+  baseURL: 'http://localhost:8002',  // Corrigé, l'API n'a pas de préfixe /api
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  // Ajout d'un timeout pour détecter les problèmes de connexion plus rapidement
+  timeout: 10000,
+});
+
+// Ajouter un intercepteur pour inclure le token CSRF dans toutes les requêtes
+api.interceptors.request.use(config => {
+  // Ajouter le token CSRF pour toutes les requêtes non-GET
+  if (config.method !== 'get') {
+    const csrfToken = getCookie('csrftoken');
+    if (csrfToken) {
+      config.headers['X-CSRFToken'] = csrfToken;
+    }
+  }
+  return config;
 });
 
 // Dashboard data
@@ -17,8 +48,42 @@ export const fetchAdminDashboard = () => api.get('/dashboard/admin/');
 // Students
 export const fetchEtudiants = () => api.get('/etudiants/');
 export const fetchEtudiant = (id) => api.get(`/etudiants/${id}/`);
-export const createEtudiant = (data) => api.post('/etudiants/', data);
-export const updateEtudiant = (id, data) => api.put(`/etudiants/${id}/`, data);
+
+// Création d'étudiant avec FormData
+export const createEtudiant = (data) => {
+  // Convertir l'objet en FormData
+  const formData = new FormData();
+  for (const key in data) {
+    if (data[key] !== null && data[key] !== undefined) {
+      formData.append(key, data[key]);
+    }
+  }
+  
+  // Utiliser FormData pour l'envoi
+  return api.post('/etudiants/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+// Mise à jour d'étudiant avec FormData
+export const updateEtudiant = (id, data) => {
+  // Convertir l'objet en FormData
+  const formData = new FormData();
+  for (const key in data) {
+    if (data[key] !== null && data[key] !== undefined) {
+      formData.append(key, data[key]);
+    }
+  }
+  
+  // Utiliser FormData pour l'envoi
+  return api.put(`/etudiants/${id}/`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
 export const deleteEtudiant = (id) => api.delete(`/etudiants/${id}/`);
 
 // Professors
@@ -34,6 +99,12 @@ export const fetchClasse = (id) => api.get(`/classes/${id}/`);
 export const createClasse = (data) => api.post('/classes/', data);
 export const updateClasse = (id, data) => api.put(`/classes/${id}/`, data);
 export const deleteClasse = (id) => api.delete(`/classes/${id}/`);
+
+// Étudiants par classe
+export const fetchEtudiantsByClasse = (classeId) => {
+  console.log(`Appel API pour récupérer les étudiants de la classe ${classeId} : http://localhost:8002/etudiants-par-classe/?classe=${classeId}`);
+  return api.get(`/etudiants-par-classe/`, { params: { classe: classeId } });
+};
 
 // Cours (Emplois du temps)
 export const fetchCours = (params) => api.get('/cours/', { params });
@@ -55,6 +126,8 @@ export const fetchNote = (id) => api.get(`/notes/${id}/`);
 export const createNote = (data) => api.post('/notes/', data);
 export const updateNote = (id, data) => api.put(`/notes/${id}/`, data);
 export const deleteNote = (id) => api.delete(`/notes/${id}/`);
+export const fetchNotesByProfesseur = (professeurId, filters) => api.get(`/professeurs/${professeurId}/notes/`, { params: filters });
+export const fetchNotesByClasse = (classeId, trimestre) => api.get(`/classes/${classeId}/notes/`, { params: { trimestre } });
 
 // Bulletins
 export const fetchBulletins = () => api.get('/bulletins/');
@@ -62,6 +135,9 @@ export const fetchBulletin = (id) => api.get(`/bulletins/${id}/`);
 export const createBulletin = (data) => api.post('/bulletins/', data);
 export const updateBulletin = (id, data) => api.put(`/bulletins/${id}/`, data);
 export const deleteBulletin = (id) => api.delete(`/bulletins/${id}/`);
+export const fetchBulletinsByClasse = (classeId, trimestre) => api.get(`/classes/${classeId}/bulletins/`, { params: { trimestre } });
+export const generateBulletin = (classeId, trimestre) => api.post(`/classes/${classeId}/bulletins/generate/`, { trimestre });
+export const downloadBulletinPdf = (bulletinId) => api.get(`/bulletins/${bulletinId}/pdf/`, { responseType: 'blob' });
 
 // Cours - Déjà défini plus haut avec paramètres
 
