@@ -19,38 +19,31 @@ const ProfessorDashboard = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        // Utiliser des données statiques au lieu de l'API
-        const mockDashboardData = {
-          statistiques_classes: [
-            {
-              classe_id: 1,
-              classe_nom: 'ijh',
-              nb_etudiants: 2,
-              moyenne_generale: 14.2,
-              nb_notes: 5
-            },
-            {
-              classe_id: 2,
-              classe_nom: 'vg66',
-              nb_etudiants: 1,
-              moyenne_generale: 16.5,
-              nb_notes: 2
-            }
-          ],
-          matieres: [
-            { id: 1, nom: 'Mathématiques', coefficient: 3 },
-            { id: 4, nom: 'Anglais', coefficient: 2 }
-          ],
-          emploi_du_temps: [
-            { jour: 'Lundi', heure_debut: '08:00', heure_fin: '10:00', matiere: 'Mathématiques', classe: 'ijh' },
-            { jour: 'Mardi', heure_debut: '14:00', heure_fin: '16:00', matiere: 'Anglais', classe: 'ijh' },
-            { jour: 'Jeudi', heure_debut: '10:00', heure_fin: '12:00', matiere: 'Mathématiques', classe: 'vg66' }
-          ],
-          total_etudiants: 3,
-          total_notes: 7
-        };
+        // Récupérer l'ID du professeur à partir du profil utilisateur
+        const professeurId = profile?.id || 1; // Utiliser 1 comme valeur par défaut si non disponible
         
-        setDashboardData(mockDashboardData);
+        // Utiliser l'API pour récupérer les données du tableau de bord
+        const timestamp = new Date().getTime(); // Pour éviter le cache
+        const response = await fetch(`/api/professeurs/${professeurId}/dashboard/?timestamp=${timestamp}`);
+        
+        let dashboardData;
+        
+        if (response.ok) {
+          dashboardData = await response.json();
+          console.log('Données du tableau de bord chargées depuis l\'API:', dashboardData);
+        } else {
+          console.error('Erreur lors du chargement des données du tableau de bord:', response.statusText);
+          // Utiliser un objet vide en cas d'erreur
+          dashboardData = {
+            statistiques_classes: [],
+            matieres: [],
+            emploi_du_temps: [],
+            total_etudiants: 0,
+            total_notes: 0
+          };
+        }
+        
+        setDashboardData(dashboardData);
       } catch (err) {
         console.error("Error loading dashboard data:", err);
         setError("Impossible de charger les données du tableau de bord");

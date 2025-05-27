@@ -367,9 +367,30 @@ const validateForm = () => {
   
   // Vérifier que le professeur enseigne au niveau sélectionné
   const professeurSelected = professeurs.find(p => p.id === parseInt(formData.professeur));
+  
   if (professeurSelected && formData.niveau) {
-    const niveauxProf = professeurSelected.niveaux || [];
-    if (!niveauxProf.includes(formData.niveau)) {
+    console.log('Vérification des niveaux pour le professeur:', professeurSelected.prenom, professeurSelected.nom);
+    console.log('Niveaux du professeur:', professeurSelected.niveaux);
+    console.log('Niveau sélectionné:', formData.niveau);
+    
+    // Vérifier si le professeur a des niveaux assignés
+    if (!professeurSelected.niveaux || !Array.isArray(professeurSelected.niveaux)) {
+      console.log('Le professeur n\'a pas de niveaux assignés ou le format est incorrect');
+      // Par défaut, considérer que le professeur enseigne à tous les niveaux
+      // si aucune information n'est disponible
+      return true;
+    }
+    
+    // Vérifier si le niveau sélectionné est dans la liste des niveaux du professeur
+    // en tenant compte des différents formats possibles (string vs number)
+    const niveauTrouve = professeurSelected.niveaux.some(niveau => {
+      // Convertir les deux valeurs en chaînes pour éviter les problèmes de type
+      return niveau.toString() === formData.niveau.toString();
+    });
+    
+    console.log('Niveau trouvé dans la liste des niveaux du professeur:', niveauTrouve);
+    
+    if (!niveauTrouve) {
       errors.professeur = 'Ce professeur n\'enseigne pas à ce niveau';
     }
   }

@@ -2,6 +2,11 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db.models import Avg, Max, Min
+from django.core.exceptions import ValidationError
+
+# Fonction pour obtenir la date du jour sans les informations de timezone
+def get_current_date():
+    return timezone.now().date()
 
 # Create your models here.
 
@@ -23,22 +28,68 @@ class Classe(models.Model):
         return f"{self.nom} - {self.get_filiere_display()} - {self.annee_scolaire}"
     
     def nombre_etudiants(self):
+        """
+        Calcule le nombre réel d'étudiants dans la classe
+        """
         return self.etudiant_set.count()
+    
+    def clean(self):
+        """
+        Validation personnalisée pour la classe
+        """
+        if not self.nom or not self.niveau or not self.filiere or not self.annee_scolaire:
+            raise ValidationError("Tous les champs sont obligatoires")
+    
+    def save(self, *args, **kwargs):
+        """
+        Surcharge de la méthode save pour assurer la cohérence des données
+        """
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """
+        Surcharge de la méthode delete pour nettoyer les données associées
+        """
+        # Supprimer les notes associées aux étudiants de cette classe
+        from .models import Note
+        Note.objects.filter(etudiant__classe=self).delete()
+        
+        # Désassocier les étudiants de la classe (au lieu de les supprimer)
+        self.etudiant_set.update(classe=None)
+        
+        # Supprimer les relations avec les matières
+        self.matiere_set.clear()
+        
+        super().delete(*args, **kwargs)
         
     def moyenne_generale(self):
+        """
+        Calcule la moyenne générale de la classe
+        """
         notes = Note.objects.filter(etudiant__classe=self)
         if notes.exists():
-            return notes.aggregate(Avg('valeur'))['valeur__avg']
+            return round(notes.aggregate(Avg('valeur'))['valeur__avg'], 2)
         return 0
 
 class Professeur(models.Model):
+    FILIERE_CHOICES = [
+        ('IIR', 'Ingénierie Informatique & Réseaux'),
+        ('GESI', 'Génie Électrique et Systèmes Intelligents'),
+        ('GCBTP', 'Génie Civil, Bâtiments et Travaux Publics'),
+        ('GI', 'Génie Industriel'),
+        ('GF', 'Génie Financier'),
+    ]
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     telephone = models.CharField(max_length=15, blank=True, null=True)
-    specialite = models.CharField(max_length=100)
+    specialite = models.CharField(max_length=100, blank=True, null=True)  # Conservé pour compatibilité avec les données existantes
+    filieres = models.CharField(max_length=255, blank=True, help_text='Filières séparées par des virgules (ex: IIR,GESI)')
     date_embauche = models.DateField(default=timezone.now)
+    niveaux_enseignes = models.CharField(max_length=20, default='1,2,3,4,5', help_text='Niveaux séparés par des virgules (ex: 1,3,5)')
     
     def __str__(self):
         return f"{self.prenom} {self.nom}"
@@ -75,12 +126,14 @@ class Etudiant(models.Model):
     prenom = models.CharField(max_length=100)
     date_naissance = models.DateField()
     sexe = models.CharField(max_length=1, choices=SEXE_CHOICES)
+    niveau = models.IntegerField(default=1, help_text='Niveau d\'ingénieur (1 à 5)')
     adresse = models.TextField(blank=True, null=True)
     email = models.EmailField(unique=True)
     telephone = models.CharField(max_length=15, blank=True, null=True)
     classe = models.ForeignKey(Classe, on_delete=models.SET_NULL, null=True)
     numero_matricule = models.CharField(max_length=20, unique=True)
-    date_inscription = models.DateField(default=timezone.now)
+    # Utilisation d'une fonction nommée pour n'obtenir que la date sans les informations de timezone
+    date_inscription = models.DateField(default=get_current_date)
     
     def __str__(self):
         return f"{self.prenom} {self.nom} ({self.numero_matricule})"
@@ -234,6 +287,7 @@ class Cours(models.Model):
     heure_fin = models.TimeField()
     salle = models.CharField(max_length=50)
     description = models.TextField(blank=True, null=True)
+    niveau = models.IntegerField(default=1)
     
     class Meta:
         unique_together = ['matiere', 'professeur', 'classe', 'jour', 'heure_debut']

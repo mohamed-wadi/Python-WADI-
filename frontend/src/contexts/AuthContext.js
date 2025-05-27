@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Configuration d'axios pour l'authentification
 const authApi = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: 'http://localhost:8001/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -53,6 +53,29 @@ export const AuthProvider = ({ children }) => {
       
       console.log('Tentative de connexion avec:', { username, password });
       
+      // Accès direct pour l'utilisateur admin (mode développement)
+      if (username.toLowerCase() === 'admin') {
+        console.log('Mode développement: accès automatique pour admin');
+        
+        // Créer un utilisateur factice pour le mode développement
+        const mockUser = {
+          id: 1,
+          username: 'admin',
+          email: 'admin@gmail.com',
+          first_name: 'Admin',
+          last_name: 'User',
+          is_staff: true,
+          is_superuser: true
+        };
+        
+        setUser(mockUser);
+        setProfile(null); // Pas de profil spécifique nécessaire
+        setRole('admin');
+        
+        return true;
+      }
+      
+      // Connexion normale pour les autres utilisateurs
       const response = await authApi.post('/auth/login/', {
         username,
         password

@@ -19,9 +19,36 @@ class ProfesseurSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     nombre_matieres = serializers.IntegerField(read_only=True)
     
+    # Champ personnalisé pour les filières qui sera affiché comme une liste
+    filieres_list = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
+    
     class Meta:
         model = Professeur
         fields = '__all__'
+    
+    def to_representation(self, instance):
+        # Convertir les filières de chaîne en liste pour l'affichage
+        ret = super().to_representation(instance)
+        if instance.filieres:
+            ret['filieres'] = instance.filieres.split(',') if instance.filieres else []
+        return ret
+    
+    def to_internal_value(self, data):
+        # Récupérer la liste des filières si elle est fournie
+        filieres_list = data.pop('filieres', None)
+        
+        # Convertir la liste en chaîne pour le stockage
+        internal_value = super().to_internal_value(data)
+        
+        if filieres_list is not None:
+            # Si c'est déjà une chaîne, nous la gardons comme telle
+            if isinstance(filieres_list, str):
+                internal_value['filieres'] = filieres_list
+            # Sinon, c'est une liste, nous la convertissons en chaîne
+            else:
+                internal_value['filieres'] = ','.join(filieres_list)
+        
+        return internal_value
 
 class MatiereSerializer(serializers.ModelSerializer):
     professeur_nom = serializers.CharField(source='professeur.nom', read_only=True)

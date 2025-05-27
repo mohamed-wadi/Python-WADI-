@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import pymysql
+
+# Installation de PyMySQL comme adaptateur MySQL pour Django
+pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +29,7 @@ SECRET_KEY = 'django-insecure-zkk3p$4!%__mf2&8&6uo5qy7kgz-l)dd%cux#jou!sn@x^*r2n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -45,14 +49,16 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # CORS doit être placé en premier
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # Désactivé pour le développement seulement, à réactiver en production
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # # 'base.middleware.DataProtectionMiddleware',  # Temporairement désactivé  # Temporairement désactivé
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -83,9 +89,14 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'gestion_ecole',
         'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'PASSWORD': 'root',  # Mot de passe MAMP par défaut
+        'HOST': '127.0.0.1',
+        'PORT': '8889',  # Port MySQL de MAMP
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+            'use_unicode': True
+        }
     }
 }
 
@@ -131,6 +142,33 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Logging configuration for debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
@@ -142,29 +180,12 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS settings
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:8000",
-    "http://localhost:8001",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1:8001",
-]
 
-# Pour le développement uniquement
+# Configuration CORS ultra-simplifiée (pas de sécurité)
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
+CORS_ORIGIN_ALLOW_ALL = True  # Autoriser toutes les origines sans restriction
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -176,13 +197,37 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 heures
 
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # Temporairement AllowAny pour le développement
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'base.authentication.CsrfExemptSessionAuthentication',  # Notre classe personnalisée
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+}
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
     "http://localhost:8000",
     "http://localhost:8001",
+    "http://localhost:8002",
+    "http://localhost:8003",
+    "http://localhost:8004",
+    "http://localhost:8005",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
     "http://127.0.0.1:8000",
     "http://127.0.0.1:8001",
+    "http://127.0.0.1:8002",
+    "http://127.0.0.1:8003",
+    "http://127.0.0.1:8004",
+    "http://127.0.0.1:8005",
 ]

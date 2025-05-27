@@ -4,7 +4,7 @@
 export const getCSRFToken = async () => {
   try {
     // Faire une requête GET au endpoint CSRF du backend
-    const response = await fetch('http://localhost:8000/api/get-csrf-token/', {
+    const response = await fetch('http://localhost:8003/api/get-csrf-token/', {
       method: 'GET',
       credentials: 'include', // Important pour que les cookies soient inclus
     });

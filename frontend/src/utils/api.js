@@ -18,24 +18,24 @@ function getCookie(name) {
 
 // Create a base axios instance with configurations
 const api = axios.create({
-  baseURL: 'http://localhost:8002',  // Corrigé, l'API n'a pas de préfixe /api
-  withCredentials: true,
+  baseURL: 'http://localhost:8001',  // URL de l'API backend mise à jour
+  withCredentials: false, // Désactivé pour le développement
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  // Ajout d'un timeout pour détecter les problèmes de connexion plus rapidement
-  timeout: 10000,
+  // Augmenter le timeout pour éviter les erreurs prématurées
+  timeout: 30000,
 });
 
-// Ajouter un intercepteur pour inclure le token CSRF dans toutes les requêtes
+// Intercepteur de requête simplifié (CSRF désactivé pour le développement)
 api.interceptors.request.use(config => {
-  // Ajouter le token CSRF pour toutes les requêtes non-GET
-  if (config.method !== 'get') {
-    const csrfToken = getCookie('csrftoken');
-    if (csrfToken) {
-      config.headers['X-CSRFToken'] = csrfToken;
-    }
+  // Ajouter un timestamp pour éviter le cache du navigateur
+  if (config.method === 'get') {
+    config.params = {
+      ...config.params,
+      _t: Date.now()
+    };
   }
   return config;
 });

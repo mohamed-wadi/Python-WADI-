@@ -76,32 +76,50 @@ def sync_classes(request):
         # Traiter chaque classe
         for class_data in data:
             class_id = class_data.get('id')
+            if not class_id:  # Skip invalid data
+                continue
+                
             processed_ids.append(class_id)
+            
+            # Vérifier les données requises
+            required_fields = ['nom', 'niveau', 'filiere', 'annee_scolaire']
+            if not all(class_data.get(field) for field in required_fields):
+                logger.warning(f"Données incomplètes pour la classe ID {class_id}")
+                continue
             
             # Chercher si la classe existe déjà
             try:
                 classe = Classe.objects.get(id=class_id)
                 # Mettre à jour les données
-                classe.nom = class_data.get('nom', '')
-                classe.niveau = class_data.get('niveau', '')
-                classe.annee_scolaire = class_data.get('annee_scolaire', '')
+                for field in required_fields:
+                    setattr(classe, field, class_data.get(field))
                 classe.save()
                 logger.info(f"Classe mise à jour: {classe.id}")
             except Classe.DoesNotExist:
                 # Créer une nouvelle classe
-                classe = Classe(
+                classe = Classe.objects.create(
                     id=class_id,
-                    nom=class_data.get('nom', ''),
-                    niveau=class_data.get('niveau', ''),
-                    annee_scolaire=class_data.get('annee_scolaire', ''),
+                    nom=class_data.get('nom'),
+                    niveau=class_data.get('niveau'),
+                    filiere=class_data.get('filiere'),
+                    annee_scolaire=class_data.get('annee_scolaire'),
                 )
-                classe.save()
                 logger.info(f"Nouvelle classe créée: {classe.id}")
         
         # Supprimer les classes qui ne sont pas dans les données reçues
-        Classe.objects.exclude(id__in=processed_ids).delete()
+        if processed_ids:
+            deleted_count = Classe.objects.exclude(id__in=processed_ids).delete()[0]
+            logger.info(f"{deleted_count} classes supprimées")
         
-        return Response({"message": f"{len(data)} classes synchronisées avec succès"}, status=status.HTTP_200_OK)
+        # Forcer le recalcul du nombre d'étudiants pour toutes les classes
+        for classe in Classe.objects.all():
+            classe.save()  # This will trigger the save method which updates related counts
+        
+        return Response({
+            "message": f"{len(data)} classes synchronisées avec succès",
+            "processed": len(processed_ids),
+            "deleted": deleted_count if 'deleted_count' in locals() else 0
+        }, status=status.HTTP_200_OK)
     
     except Exception as e:
         logger.error(f"Erreur lors de la synchronisation des classes: {str(e)}")

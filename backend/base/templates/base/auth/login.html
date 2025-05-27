@@ -28,6 +28,9 @@
                             {{ form.password }}
                         </div>
                         <button type="submit" class="btn btn-primary btn-block w-100">Se connecter</button>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'base:reset-admin-password' %}" class="text-decoration-none">Mot de passe oublié ?</a>
+                        </div>
                     </form>
                 </div>
             </div>

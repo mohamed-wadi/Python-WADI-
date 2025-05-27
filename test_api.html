@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Django</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .loading {
+            color: blue;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Testeur d'API Django</h1>
+    <p>Cet outil simple vous permet de tester directement les endpoints de l'API Django sans passer par l'application React.</p>
+    
+    <div class="card">
+        <h2>Configuration</h2>
+        <div class="form-group">
+            <label for="apiUrl">URL de base de l'API:</label>
+            <input type="text" id="apiUrl" value="http://localhost:8002/api" />
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>Test GET - Liste des classes</h2>
+        <button onclick="testGet()">Tester GET /classes/</button>
+        <div id="getResult"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Test POST - Créer une classe</h2>
+        <div class="form-group">
+            <label for="className">Nom de la classe:</label>
+            <input type="text" id="className" value="Classe Test API" />
+        </div>
+        <div class="form-group">
+            <label for="classLevel">Niveau:</label>
+            <select id="classLevel">
+                <option value="1">1ère année</option>
+                <option value="2">2ème année</option>
+                <option value="3">3ème année</option>
+                <option value="4">4ème année</option>
+                <option value="5">5ème année</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="classFiliere">Filière:</label>
+            <select id="classFiliere">
+                <option value="IIR">IIR</option>
+                <option value="GI">GI</option>
+                <option value="ISIL">ISIL</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="classYear">Année scolaire:</label>
+            <input type="text" id="classYear" value="2024-2025" />
+        </div>
+        <button onclick="testPost()">Tester POST /classes/</button>
+        <div id="postResult"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Test PUT - Modifier une classe</h2>
+        <div class="form-group">
+            <label for="classId">ID de la classe:</label>
+            <input type="text" id="classId" placeholder="Entrez l'ID d'une classe existante" />
+        </div>
+        <div class="form-group">
+            <label for="classNameUpdate">Nouveau nom:</label>
+            <input type="text" id="classNameUpdate" value="Classe Modifiée" />
+        </div>
+        <button onclick="testPut()">Tester PUT /classes/{id}/</button>
+        <div id="putResult"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Test DELETE - Supprimer une classe</h2>
+        <div class="form-group">
+            <label for="classIdDelete">ID de la classe à supprimer:</label>
+            <input type="text" id="classIdDelete" placeholder="Entrez l'ID d'une classe existante" />
+        </div>
+        <button onclick="testDelete()">Tester DELETE /classes/{id}/</button>
+        <div id="deleteResult"></div>
+    </div>
+
+    <script>
+        // Fonction pour obtenir l'URL de base de l'API
+        function getApiBaseUrl() {
+            return document.getElementById('apiUrl').value.trim();
+        }
+        
+        // Fonction pour afficher le résultat
+        function displayResult(elementId, isLoading, isSuccess, message) {
+            const element = document.getElementById(elementId);
+            if (isLoading) {
+                element.innerHTML = `<p class="loading">Chargement en cours...</p>`;
+                return;
+            }
+            
+            if (isSuccess) {
+                element.innerHTML = `<p class="success">Succès!</p><pre>${message}</pre>`;
+            } else {
+                element.innerHTML = `<p class="error">Erreur!</p><pre>${message}</pre>`;
+            }
+        }
+        
+        // Test GET
+        async function testGet() {
+            const resultElement = 'getResult';
+            displayResult(resultElement, true);
+            
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/classes/`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResult(resultElement, false, true, JSON.stringify(data, null, 2));
+            } catch (error) {
+                displayResult(resultElement, false, false, error.toString());
+            }
+        }
+        
+        // Test POST
+        async function testPost() {
+            const resultElement = 'postResult';
+            displayResult(resultElement, true);
+            
+            try {
+                const classData = {
+                    nom: document.getElementById('className').value,
+                    niveau: document.getElementById('classLevel').value,
+                    filiere: document.getElementById('classFiliere').value,
+                    annee_scolaire: document.getElementById('classYear').value
+                };
+                
+                const response = await fetch(`${getApiBaseUrl()}/classes/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(classData),
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                displayResult(resultElement, false, true, JSON.stringify(data, null, 2));
+                
+                // Mettre à jour le champ ID pour le test PUT
+                document.getElementById('classId').value = data.id;
+                document.getElementById('classIdDelete').value = data.id;
+            } catch (error) {
+                displayResult(resultElement, false, false, error.toString());
+            }
+        }
+        
+        // Test PUT
+        async function testPut() {
+            const resultElement = 'putResult';
+            displayResult(resultElement, true);
+            
+            const classId = document.getElementById('classId').value;
+            if (!classId) {
+                displayResult(resultElement, false, false, "Veuillez entrer un ID de classe valide.");
+                return;
+            }
+            
+            try {
+                const classData = {
+                    nom: document.getElementById('classNameUpdate').value,
+                    niveau: document.getElementById('classLevel').value,
+                    filiere: document.getElementById('classFiliere').value,
+                    annee_scolaire: document.getElementById('classYear').value
+                };
+                
+                const response = await fetch(`${getApiBaseUrl()}/classes/${classId}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(classData),
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                displayResult(resultElement, false, true, JSON.stringify(data, null, 2));
+            } catch (error) {
+                displayResult(resultElement, false, false, error.toString());
+            }
+        }
+        
+        // Test DELETE
+        async function testDelete() {
+            const resultElement = 'deleteResult';
+            displayResult(resultElement, true);
+            
+            const classId = document.getElementById('classIdDelete').value;
+            if (!classId) {
+                displayResult(resultElement, false, false, "Veuillez entrer un ID de classe valide.");
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/classes/${classId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+                
+                displayResult(resultElement, false, true, "Classe supprimée avec succès!");
+            } catch (error) {
+                displayResult(resultElement, false, false, error.toString());
+            }
+        }
+    </script>
+</body>
+</html>

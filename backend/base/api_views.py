@@ -6,6 +6,9 @@ from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Avg, Count, Q
 from datetime import datetime
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
+from django.utils.decorators import method_decorator
 
 from .models import Etudiant, Professeur, Classe, Matiere, Note, Bulletin, Cours, Absence
 from .api_serializers import (
@@ -42,7 +45,15 @@ class IsProfesseurOrAdminOrReadOnly(permissions.BasePermission):
             return obj.professeur.id == request.user.professeur.id
         return False
 
+# CSRF Protection
+@api_view(['GET'])
+@ensure_csrf_cookie
+def get_csrf_token(request):
+    token = get_token(request)
+    return Response({'csrfToken': token})
+
 # Authentication
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
     
@@ -136,21 +147,25 @@ class EtudiantViewSet(viewsets.ModelViewSet):
     queryset = Etudiant.objects.all()
     serializer_class = EtudiantSerializer
     permission_classes = [permissions.AllowAny]  # Temporairement AllowAny pour le développement
+    authentication_classes = []  # Désactiver l'authentification pour le développement
 
 class ProfesseurViewSet(viewsets.ModelViewSet):
     queryset = Professeur.objects.all()
     serializer_class = ProfesseurSerializer
     permission_classes = [permissions.AllowAny]  # Temporairement AllowAny pour le développement
+    authentication_classes = []  # Désactiver l'authentification pour le développement
 
 class ClasseViewSet(viewsets.ModelViewSet):
     queryset = Classe.objects.all()
     serializer_class = ClasseSerializer
     permission_classes = [permissions.AllowAny]  # Temporairement AllowAny pour le développement
+    authentication_classes = []  # Désactiver l'authentification pour le développement
 
 class MatiereViewSet(viewsets.ModelViewSet):
     queryset = Matiere.objects.all()
     serializer_class = MatiereSerializer
     permission_classes = [permissions.AllowAny]  # Temporairement AllowAny pour le développement
+    authentication_classes = []  # Désactiver l'authentification pour le développement
 
 class CoursViewSet(viewsets.ModelViewSet):
     queryset = Cours.objects.all()
@@ -400,8 +415,10 @@ def professeur_dashboard_data(request):
 
 @api_view(['GET'])
 def admin_dashboard_data(request):
-    if not request.user.is_authenticated or not (request.user.groups.filter(name='Admins').exists() or request.user.is_staff):
-        return Response(status=status.HTTP_403_FORBIDDEN)
+    # En mode développement, ne pas vérifier l'authentification
+    # Commenté pour permettre l'accès facile pendant le développement
+    # if not request.user.is_authenticated or not (request.user.groups.filter(name='Admins').exists() or request.user.is_staff):
+    #     return Response(status=status.HTTP_403_FORBIDDEN)
     
     # Count statistics
     nb_etudiants = Etudiant.objects.count()

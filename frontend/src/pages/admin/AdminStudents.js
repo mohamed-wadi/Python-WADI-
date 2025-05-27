@@ -31,7 +31,7 @@ import {
 import * as XLSX from 'xlsx';
 
 import { etudiantService, classeService } from '../../utils/apiService';
-import { NIVEAUX_INGENIEUR } from '../../utils/constants';
+import { NIVEAUX_INGENIEUR, FILIERES_CHOICES } from '../../utils/constants';
 
 const AdminStudents = () => {
   const [etudiants, setEtudiants] = useState([]);
@@ -49,12 +49,14 @@ const AdminStudents = () => {
     email: '',
     telephone: '',
     classe: '',
-    niveau: '', // Nouveau champ pour le niveau d'étudiant
+    niveau: '', 
+    filiere: 'IIR',
     numero_matricule: ''
   });
   const [openConfirm, setOpenConfirm] = useState(false);
   const [etudiantToDelete, setEtudiantToDelete] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -65,6 +67,21 @@ const AdminStudents = () => {
   useEffect(() => {
     loadData();
   }, []);
+  
+  // Mettre à jour les classes filtrées lorsque la liste des classes, le niveau ou la filière change
+  useEffect(() => {
+    const { niveau, filiere } = formData;
+    
+    console.log('useEffect déclenché pour le filtrage, données:', {
+      classes: classes.length,
+      niveau,
+      filiere
+    });
+    
+    // Toujours appliquer le filtrage même si niveau et filière ne sont pas spécifiés
+    // afin de garantir que la liste est mise à jour correctement
+    filterClasses(niveau, filiere);
+  }, [classes, formData.niveau, formData.filiere]);
 
   const loadData = async () => {
     setLoading(true);
@@ -82,6 +99,7 @@ const AdminStudents = () => {
       // Chargement des classes depuis l'API REST
       try {
         const classesData = await classeService.getAll();
+        console.log('Classes reçues du backend:', classesData);
         setClasses(Array.isArray(classesData) ? classesData : []);
       } catch (error) {
         console.error('Erreur lors du chargement des classes depuis l\'API:', error);
@@ -189,12 +207,133 @@ const AdminStudents = () => {
     setOpenForm(false);
   };
 
+  // Générer un numéro de matricule en fonction du niveau et de la filière
+  const generateMatricule = (niveau, filiere) => {
+    if (!niveau || !filiere) return '';
+    
+    let prefixe = '';
+    
+    // Préfixe basé sur la filière
+    switch(filiere) {
+      case 'IIR':
+        prefixe = 'RP'; // Réseau
+        break;
+      case 'GESI':
+        prefixe = 'ES'; // Électrique & Systèmes
+        break;
+      case 'GCBTP':
+        prefixe = 'GC'; // Génie Civil
+        break;
+      case 'GI':
+        prefixe = 'GI'; // Génie Industriel
+        break;
+      case 'GF':
+        prefixe = 'GF'; // Génie Financier
+        break;
+      default:
+        prefixe = 'ET'; // Étudiant
+    }
+    
+    // Ajouter le niveau (année)
+    const niveauNum = niveau.toString().charAt(0);
+    prefixe += niveauNum;
+    
+    // Générer un numéro aléatoire à 3 chiffres
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    
+    return `${prefixe}${randomNum}`;
+  };
+  
+  // Filtrer les classes en fonction du niveau ET de la filière sélectionnés
+  const filterClasses = (niveau, filiere) => {
+    console.log('Filtrage des classes avec:', { niveau, filiere, classes });
+    console.log('Classes disponibles:', classes.map(c => `${c.nom} (niveau: ${c.niveau}, filière: ${c.filiere})`));
+    
+    if (!classes || classes.length === 0) {
+      console.log('Aucune classe disponible');
+      setFilteredClasses([]);
+      return;
+    }
+    
+    if (!niveau && !filiere) {
+      console.log('Aucun filtre spécifié, affichage de toutes les classes');
+      setFilteredClasses(classes);
+      return;
+    }
+    
+    // Réinitialiser les classes filtrées avec toutes les classes disponibles
+    let filtered = [...classes];
+    let appliedFilters = [];
+    
+    // Appliquer le filtre de niveau si spécifié
+    if (niveau) {
+      appliedFilters.push(`niveau=${niveau}`);
+      filtered = filtered.filter(classe => {
+        // Assurer que la comparaison est basée sur des chaînes pour éviter les problèmes de type
+        const classeNiveau = classe.niveau?.toString() || '';
+        const selectedNiveau = niveau?.toString() || '';
+        const niveauMatch = classeNiveau === selectedNiveau;
+        
+        if (!niveauMatch) {
+          console.log(`EXCLUS - Classe ${classe.nom}, niveau ${classeNiveau} ne correspond pas à ${selectedNiveau}`);
+        }
+        
+        return niveauMatch;
+      });
+    }
+    
+    // Appliquer le filtre de filière si spécifié (ET logique avec le filtre de niveau)
+    if (filiere) {
+      appliedFilters.push(`filière=${filiere}`);
+      filtered = filtered.filter(classe => {
+        // Assurer que la comparaison est exacte
+        const classeFilière = classe.filiere || '';
+        const filièreMatch = classeFilière === filiere;
+        
+        if (!filièreMatch) {
+          console.log(`EXCLUS - Classe ${classe.nom}, filière ${classeFilière} ne correspond pas à ${filiere}`);
+        }
+        
+        return filièreMatch;
+      });
+    }
+    
+    console.log(`Classes filtrées (${appliedFilters.join(' ET ')}):`, 
+      filtered.map(c => `${c.nom} (niveau: ${c.niveau}, filière: ${c.filiere})`));
+    
+    // Définir les classes filtrées pour être utilisées dans le formulaire
+    setFilteredClasses(filtered);
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
+    
+    // Mettre à jour le state formData
+    const updatedFormData = {
       ...formData,
       [name]: value
-    });
+    };
+    
+    // Si le niveau ou la filière change, générer un nouveau numéro matricule et filtrer les classes
+    if (name === 'niveau' || name === 'filiere') {
+      // Mise à jour des valeurs de niveau et filière
+      const niveau = name === 'niveau' ? value : formData.niveau;
+      const filiere = name === 'filiere' ? value : formData.filiere;
+      
+      // Filtrer les classes en fonction du niveau ET de la filière
+      filterClasses(niveau, filiere);
+      
+      // Réinitialiser la classe sélectionnée si le niveau ou la filière change
+      updatedFormData.classe = '';
+      
+      // Générer un nouveau matricule si les deux valeurs sont disponibles
+      if (niveau && filiere) {
+        updatedFormData.numero_matricule = generateMatricule(niveau, filiere);
+      }
+    }
+    
+    // Mettre à jour le state
+    setFormData(updatedFormData);
     
     // Effacer l'erreur lorsque l'utilisateur corrige le champ
     if (formErrors[name]) {
@@ -491,7 +630,7 @@ const AdminStudents = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6}>
                 <TextField
                   name="nom"
                   label="Nom"
@@ -578,41 +717,6 @@ const AdminStudents = () => {
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  name="numero_matricule"
-                  label="Numéro de matricule"
-                  value={formData.numero_matricule}
-                  onChange={handleInputChange}
-                  fullWidth
-                  required
-                  error={Boolean(formErrors.numero_matricule)}
-                  helperText={formErrors.numero_matricule}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required error={Boolean(formErrors.classe)}>
-                  <InputLabel id="classe-label">Classe</InputLabel>
-                  <Select
-                    labelId="classe-label"
-                    name="classe"
-                    value={formData.classe}
-                    onChange={handleInputChange}
-                    label="Classe"
-                  >
-                    {classes.map((classe) => (
-                      <MenuItem key={classe.id} value={classe.id}>
-                        {classe.nom} - {classe.niveau}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {formErrors.classe && (
-                    <Typography color="error" variant="caption">
-                      {formErrors.classe}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
                 <FormControl fullWidth required error={Boolean(formErrors.niveau)}>
                   <InputLabel id="niveau-label">Niveau</InputLabel>
                   <Select
@@ -634,6 +738,80 @@ const AdminStudents = () => {
                     </Typography>
                   )}
                 </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required error={Boolean(formErrors.filiere)}>
+                  <InputLabel id="filiere-label">Filière</InputLabel>
+                  <Select
+                    labelId="filiere-label"
+                    name="filiere"
+                    value={formData.filiere}
+                    onChange={handleInputChange}
+                    label="Filière"
+                  >
+                    {FILIERES_CHOICES.map((filiere) => (
+                      <MenuItem key={filiere.value} value={filiere.value}>
+                        {filiere.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formErrors.filiere && (
+                    <Typography color="error" variant="caption">
+                      {formErrors.filiere}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required error={Boolean(formErrors.classe)}>
+                  <InputLabel id="classe-label">Classe</InputLabel>
+                  <Select
+                    labelId="classe-label"
+                    name="classe"
+                    value={formData.classe}
+                    onChange={handleInputChange}
+                    label="Classe"
+                    disabled={!formData.niveau}
+                  >
+                    {/* Utiliser uniquement les classes filtrées, jamais toutes les classes */}
+                    {filteredClasses.map((classe) => {
+                      // Trouver le nom complet de la filière à partir du code
+                      const filiereLabel = FILIERES_CHOICES.find(f => f.value === classe.filiere)?.label || classe.filiere;
+                      // Trouver le nom complet du niveau à partir de l'ID
+                      const niveauLabel = NIVEAUX_INGENIEUR.find(n => n.id.toString() === classe.niveau?.toString())?.nom || classe.niveau;
+                      
+                      return (
+                        <MenuItem key={classe.id} value={classe.id}>
+                          {classe.nom} - {niveauLabel} - {filiereLabel}
+                        </MenuItem>
+                      );
+                    })}
+                    {filteredClasses.length === 0 && formData.niveau && formData.filiere && (
+                      <MenuItem disabled value="">
+                        Aucune classe disponible pour {NIVEAUX_INGENIEUR.find(n => n.id.toString() === formData.niveau)?.nom} en {FILIERES_CHOICES.find(f => f.value === formData.filiere)?.label}
+                      </MenuItem>
+                    )}
+                  </Select>
+                  {formErrors.classe && (
+                    <Typography color="error" variant="caption">
+                      {formErrors.classe}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  name="numero_matricule"
+                  label="Numéro de matricule (généré automatiquement)"
+                  value={formData.numero_matricule}
+                  fullWidth
+                  required
+                  error={Boolean(formErrors.numero_matricule)}
+                  helperText={formErrors.numero_matricule || 'Généré automatiquement en fonction du niveau et de la filière'}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                />
               </Grid>
             </Grid>
         </DialogContent>

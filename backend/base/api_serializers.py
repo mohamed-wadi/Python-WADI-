@@ -33,10 +33,11 @@ class ProfesseurSerializer(serializers.ModelSerializer):
 
 class ClasseSerializer(serializers.ModelSerializer):
     nb_etudiants = serializers.SerializerMethodField()
+    filiere_display = serializers.CharField(source='get_filiere_display', read_only=True)
     
     class Meta:
         model = Classe
-        fields = ['id', 'nom', 'niveau', 'annee_scolaire', 'nb_etudiants']
+        fields = ['id', 'nom', 'niveau', 'filiere', 'filiere_display', 'annee_scolaire', 'nb_etudiants']
     
     def get_nb_etudiants(self, obj):
         return obj.etudiant_set.count()

@@ -201,6 +201,10 @@ const AdminSubjects = () => {
       };
       
       if (formType === 'create') {
+        // Dès qu'on ajoute une matière, on réinitialise le marquage de suppression
+        localStorage.removeItem(`${ENTITY_KEYS.MATIERES}_deleted`);
+        console.log('Marquage de suppression des matières réinitialisé');
+        
         // Création d'une nouvelle matière via l'API REST
         const newMatiere = await matiereService.create(matiereData);
         

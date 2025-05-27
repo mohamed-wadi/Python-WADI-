@@ -118,45 +118,49 @@ const ProfessorNotes = () => {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      // Données statiques pour les classes et les matières
-      const classesData = [
-        { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
-        { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
-      ];
+      // Charger les classes depuis l'API
+      let classesData = [];
+      try {
+        // Utiliser un timestamp pour éviter le cache du navigateur
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/classes/?timestamp=${timestamp}`);
+        if (response.ok) {
+          classesData = await response.json();
+          console.log('Classes chargées depuis l\'API:', classesData);
+        } else {
+          console.error('Erreur lors du chargement des classes:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des classes:', error);
+      }
       
-      const matieresData = [
-        { id: 1, nom: 'Mathématiques', coefficient: 3, professeur: 1 },
-        { id: 2, nom: 'Français', coefficient: 2, professeur: 2 },
-        { id: 3, nom: 'Histoire-Géographie', coefficient: 2, professeur: 3 },
-        { id: 4, nom: 'Anglais', coefficient: 2, professeur: 1 },
-        { id: 5, nom: 'Physique-Chimie', coefficient: 2, professeur: 5 }
-      ];
-      
-      const professeurMatieres = matieresData.filter(m => 
-        m.professeur === professeurId
-      );
+      // Charger les matières du professeur depuis l'API
+      let matieresData = [];
+      try {
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/matieres/?professeur=${professeurId}&timestamp=${timestamp}`);
+        if (response.ok) {
+          matieresData = await response.json();
+          console.log('Matières chargées depuis l\'API:', matieresData);
+        } else {
+          console.error('Erreur lors du chargement des matières:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des matières:', error);
+      }
       
       setClasses(classesData);
-      setMatieres(professeurMatieres);
+      setMatieres(matieresData);
       
       // Sélectionner automatiquement la première matière du professeur
-      if (professeurMatieres.length > 0) {
-        setSelectedMatiere(professeurMatieres[0].id.toString());
+      if (matieresData.length > 0) {
+        setSelectedMatiere(matieresData[0].id.toString());
       }
       
       // Sélectionner automatiquement la première classe
       if (classesData.length > 0) {
         setSelectedClasse(classesData[0].id.toString());
       }
-      
-      // Charger également les étudiants par défaut
-      const etudiantsData = [
-        { id: 1, nom: 'wadi', prenom: '3abdo', classe: 1, classe_nom: 'ijh', numero_matricule: 'E001' },
-        { id: 2, nom: 'Dupont', prenom: 'Jean', classe: 1, classe_nom: 'ijh', numero_matricule: 'E002' },
-        { id: 3, nom: 'Martin', prenom: 'Sophie', classe: 2, classe_nom: 'vg66', numero_matricule: 'E003' }
-      ];
-      
-      setEtudiants(etudiantsData.filter(e => e.classe === 1));
       
     } catch (error) {
       console.error('Erreur lors du chargement des données initiales:', error);

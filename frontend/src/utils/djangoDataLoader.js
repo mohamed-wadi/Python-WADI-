@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8002/api';
+const API_URL = 'http://localhost:8003/api';
 
 /**
  * Charge les données depuis le backend Django et les stocke dans localStorage
@@ -9,6 +9,18 @@ const API_URL = 'http://localhost:8002/api';
 export const loadDjangoData = async () => {
     try {
         console.log('Chargement des données depuis Django...');
+        
+        // Vérifier si les données ont déjà été chargées au moins une fois
+        const dataInitialized = localStorage.getItem('schoolAppDataInitialized');
+        
+        // Si les données ont déjà été initialisées, ne pas les recharger automatiquement
+        // pour respecter les suppressions faites par l'utilisateur
+        if (dataInitialized === 'true') {
+            console.log('Les données ont déjà été initialisées, conservation des modifications existantes');
+            return true;
+        }
+        
+        // Sinon, charger les données pour la première fois
         await Promise.all([
             loadProfesseurs(),
             loadClasses(),
@@ -17,6 +29,10 @@ export const loadDjangoData = async () => {
             loadNotes(),
             loadCours()
         ]);
+        
+        // Marquer que les données ont été initialisées
+        localStorage.setItem('schoolAppDataInitialized', 'true');
+        
         console.log('Données Django chargées avec succès');
         return true;
     } catch (error) {
@@ -30,17 +46,21 @@ const loadProfesseurs = async () => {
         // Vérifier si des données locales existent déjà
         const localData = localStorage.getItem('schoolAppProfesseurs');
         
-        // Récupérer les données depuis Django
-        const response = await axios.get(`${API_URL}/professeurs/`);
-        if (response.data && Array.isArray(response.data)) {
-            // Si aucune donnée locale n'existe, utiliser les données Django
-            if (!localData) {
+        // Si des données locales existent déjà, ne pas les écraser (pour conserver les suppressions)
+        if (localData && localData !== '[]') {
+            console.log('Conservation des professeurs existants dans localStorage');
+            return;
+        }
+        
+        // Récupérer les données depuis Django seulement si aucune donnée locale n'existe
+        try {
+            const response = await axios.get(`${API_URL}/professeurs/`);
+            if (response.data && Array.isArray(response.data)) {
                 localStorage.setItem('schoolAppProfesseurs', JSON.stringify(response.data));
                 console.log('Professeurs chargés depuis Django');
-            } else {
-                // Fusionner les données Django avec les données locales (priorité locale)
-                mergeData('schoolAppProfesseurs', response.data);
             }
+        } catch (apiError) {
+            console.error('Erreur API lors du chargement des professeurs:', apiError);
         }
     } catch (error) {
         console.error('Erreur lors du chargement des professeurs:', error);
@@ -49,16 +69,25 @@ const loadProfesseurs = async () => {
 
 const loadClasses = async () => {
     try {
+        // Vérifier si des données locales existent déjà
         const localData = localStorage.getItem('schoolAppClasses');
-        const response = await axios.get(`${API_URL}/classes/`);
-        if (response.data && Array.isArray(response.data)) {
-            if (!localData) {
+        
+        // Si des données locales existent déjà, ne pas les écraser (pour conserver les suppressions)
+        if (localData && localData !== '[]') {
+            console.log('Conservation des classes existantes dans localStorage');
+            return;
+        }
+        
+        // Récupérer les données depuis Django seulement si aucune donnée locale n'existe
+        try {
+            const response = await axios.get(`${API_URL}/classes/`);
+            if (response.data && Array.isArray(response.data)) {
                 localStorage.setItem('schoolAppClasses', JSON.stringify(response.data));
                 localStorage.setItem('schoolAppClasses_backup', JSON.stringify(response.data));
                 console.log('Classes chargées depuis Django');
-            } else {
-                mergeData('schoolAppClasses', response.data);
             }
+        } catch (apiError) {
+            console.error('Erreur API lors du chargement des classes:', apiError);
         }
     } catch (error) {
         console.error('Erreur lors du chargement des classes:', error);
@@ -84,15 +113,24 @@ const loadEtudiants = async () => {
 
 const loadMatieres = async () => {
     try {
+        // Vérifier si des données locales existent déjà
         const localData = localStorage.getItem('schoolAppMatieres');
-        const response = await axios.get(`${API_URL}/matieres/`);
-        if (response.data && Array.isArray(response.data)) {
-            if (!localData) {
+        
+        // Si des données locales existent déjà, ne pas les écraser (pour conserver les suppressions)
+        if (localData && localData !== '[]') {
+            console.log('Conservation des matières existantes dans localStorage');
+            return;
+        }
+        
+        // Récupérer les données depuis Django seulement si aucune donnée locale n'existe
+        try {
+            const response = await axios.get(`${API_URL}/matieres/`);
+            if (response.data && Array.isArray(response.data)) {
                 localStorage.setItem('schoolAppMatieres', JSON.stringify(response.data));
                 console.log('Matières chargées depuis Django');
-            } else {
-                mergeData('schoolAppMatieres', response.data);
             }
+        } catch (apiError) {
+            console.error('Erreur API lors du chargement des matières:', apiError);
         }
     } catch (error) {
         console.error('Erreur lors du chargement des matières:', error);

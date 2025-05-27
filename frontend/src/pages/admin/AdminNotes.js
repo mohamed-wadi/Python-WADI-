@@ -42,7 +42,7 @@ import {
 } from '@mui/icons-material';
 
 import { NIVEAUX_INGENIEUR, TYPES_EVALUATION } from '../../utils/constants';
-import { etudiantService, matiereService, professeurService, classeService, noteService } from '../../utils/apiService';
+import { etudiantService, matiereService, professeurService, classeService, noteService } from '../../utils/apiService'; 
 
 const AdminNotes = () => {
   // États pour les données
@@ -91,6 +91,8 @@ const AdminNotes = () => {
   
   // États pour le chargement
   const [loading, setLoading] = useState(false);
+  
+
   
   // Fonction pour charger les étudiants depuis l'API
   const loadEtudiants = async () => {

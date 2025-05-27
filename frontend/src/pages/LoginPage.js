@@ -124,6 +124,23 @@ const LoginPage = () => {
               >
                 Se connecter
               </Button>
+              
+              <Box sx={{ textAlign: 'center', mt: 1, mb: 1 }}>
+                <Typography
+                  component="a"
+                  href="http://localhost:8002/reset-admin-password/"
+                  variant="body2"
+                  sx={{ 
+                    color: 'primary.main', 
+                    textDecoration: 'none',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    } 
+                  }}
+                >
+                  Mot de passe oublié ?
+                </Typography>
+              </Box>
             </Box>
           </Paper>
         </motion.div>

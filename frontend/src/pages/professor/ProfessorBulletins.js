@@ -293,26 +293,39 @@ const ProfessorBulletins = () => {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      // Données statiques pour les classes
-      const classesData = [
-        { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
-        { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
-      ];
+      // Charger les classes depuis l'API
+      let classesData = [];
+      try {
+        // Utiliser un timestamp pour éviter le cache du navigateur
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/classes/?timestamp=${timestamp}`);
+        if (response.ok) {
+          classesData = await response.json();
+          console.log('Classes chargées depuis l\'API:', classesData);
+        } else {
+          console.error('Erreur lors du chargement des classes:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des classes:', error);
+      }
       
-      // Données statiques pour les matières
-      const matieresData = [
-        { id: 1, nom: 'Mathématiques', coefficient: 3, professeur: 1 },
-        { id: 2, nom: 'Français', coefficient: 2, professeur: 2 },
-        { id: 3, nom: 'Histoire-Géographie', coefficient: 2, professeur: 3 },
-        { id: 4, nom: 'Anglais', coefficient: 2, professeur: 4 },
-        { id: 5, nom: 'Physique-Chimie', coefficient: 2, professeur: 5 }
-      ];
-      
-      // Filtrer les matières du professeur connecté
-      const professeurMatieres = matieresData.filter(m => m.professeur === professeurId);
+      // Charger les matières du professeur depuis l'API
+      let matieresData = [];
+      try {
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/matieres/?professeur=${professeurId}&timestamp=${timestamp}`);
+        if (response.ok) {
+          matieresData = await response.json();
+          console.log('Matières chargées depuis l\'API:', matieresData);
+        } else {
+          console.error('Erreur lors du chargement des matières:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des matières:', error);
+      }
       
       setClasses(classesData);
-      setMatieres(professeurMatieres);
+      setMatieres(matieresData);
       
       // Sélectionner la première classe par défaut
       if (classesData.length > 0) {
@@ -329,37 +342,96 @@ const ProfessorBulletins = () => {
   const loadClasseData = async () => {
     setLoadingClasseData(true);
     try {
-      // Données statiques pour les étudiants
-      const mockEtudiants = [
-        { id: 1, nom: 'wadi', prenom: '3abdo', classe: 1, classe_nom: 'ijh', numero_matricule: 'E001' },
-        { id: 2, nom: 'Dupont', prenom: 'Jean', classe: 1, classe_nom: 'ijh', numero_matricule: 'E002' },
-        { id: 3, nom: 'Martin', prenom: 'Sophie', classe: 2, classe_nom: 'vg66', numero_matricule: 'E003' }
-      ].filter(e => e.classe === parseInt(selectedClasse));
+      if (!selectedClasse) {
+        console.log('Aucune classe sélectionnée');
+        setEtudiants([]);
+        setBulletins([]);
+        return;
+      }
       
-      // Données statiques pour les notes
-      const mockNotes = [
-        { id: 1, etudiant: 1, matiere: 1, professeur: 1, valeur: 15.5, date_evaluation: '2025-05-20', type_evaluation: 'Examen', trimestre: 1 },
-        { id: 2, etudiant: 1, matiere: 2, professeur: 2, valeur: 14, date_evaluation: '2025-05-15', type_evaluation: 'Contrôle', trimestre: 1 },
-        { id: 3, etudiant: 1, matiere: 3, professeur: 3, valeur: 16, date_evaluation: '2025-05-10', type_evaluation: 'TP', trimestre: 1 },
-        { id: 4, etudiant: 2, matiere: 1, professeur: 1, valeur: 12, date_evaluation: '2025-05-12', type_evaluation: 'Examen', trimestre: 1 },
-        { id: 5, etudiant: 2, matiere: 2, professeur: 2, valeur: 13, date_evaluation: '2025-05-13', type_evaluation: 'Contrôle', trimestre: 1 }
-      ].filter(n => n.trimestre === parseInt(selectedTrimestre));
+      // Récupérer les étudiants de la classe sélectionnée depuis l'API
+      let etudiantsData = [];
+      try {
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/etudiants/?classe=${selectedClasse}&timestamp=${timestamp}`);
+        if (response.ok) {
+          etudiantsData = await response.json();
+          console.log('Étudiants chargés depuis l\'API:', etudiantsData);
+        } else {
+          console.error('Erreur lors du chargement des étudiants:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des étudiants:', error);
+      }
       
-      // Données statiques pour les bulletins
-      const mockBulletins = [
-        { id: 1, etudiant: 1, classe: 1, trimestre: 1, moyenne_generale: 15.2, rang: 1, total_eleves: 2, appreciation: 'Excellent trimestre, continue ainsi!' },
-        { id: 2, etudiant: 2, classe: 1, trimestre: 1, moyenne_generale: 12.5, rang: 2, total_eleves: 2, appreciation: 'Bon travail, peut encore progresser.' }
-      ].filter(b => b.classe === parseInt(selectedClasse) && b.trimestre === parseInt(selectedTrimestre));
+      // Récupérer les notes des étudiants pour le trimestre sélectionné depuis l'API
+      let notesData = [];
+      try {
+        if (etudiantsData.length > 0) {
+          const etudiantIds = etudiantsData.map(e => e.id).join(',');
+          const timestamp = new Date().getTime();
+          const response = await fetch(`/api/notes/?etudiants=${etudiantIds}&trimestre=${selectedTrimestre}&timestamp=${timestamp}`);
+          if (response.ok) {
+            notesData = await response.json();
+            console.log('Notes chargées depuis l\'API:', notesData);
+          } else {
+            console.error('Erreur lors du chargement des notes:', response.statusText);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des notes:', error);
+      }
       
-      setEtudiants(mockEtudiants);
-      setNotes(mockNotes);
-      setBulletins(mockBulletins);
+      // Organiser les données par étudiant pour le bulletin
+      const etudiantsBulletins = etudiantsData.map(etudiant => {
+        const etudiantNotes = notesData.filter(note => note.etudiant === etudiant.id);
+        
+        // Calculer la moyenne par matière
+        const moyennesParMatiere = {};
+        etudiantNotes.forEach(note => {
+          if (!moyennesParMatiere[note.matiere]) {
+            moyennesParMatiere[note.matiere] = {
+              somme: 0,
+              count: 0,
+            };
+          }
+          moyennesParMatiere[note.matiere].somme += note.valeur;
+          moyennesParMatiere[note.matiere].count += 1;
+        });
+        
+        // Convertir en tableau pour l'affichage
+        const notesTableau = Object.keys(moyennesParMatiere).map(matiereId => {
+          const { somme, count } = moyennesParMatiere[matiereId];
+          const moyenne = count > 0 ? somme / count : 0;
+          const matiere = matieres.find(m => m.id === parseInt(matiereId));
+          return {
+            matiere_id: matiereId,
+            matiere_nom: matiere ? matiere.nom : `Matière ${matiereId}`,
+            moyenne: moyenne,
+            coefficient: matiere ? matiere.coefficient : 1
+          };
+        });
+        
+        // Calculer la moyenne générale
+        let sommeCoeffs = 0;
+        let sommeNotes = 0;
+        
+        notesTableau.forEach(note => {
+          sommeNotes += note.moyenne * note.coefficient;
+          sommeCoeffs += note.coefficient;
+        });
+        
+        const moyenneGenerale = sommeCoeffs > 0 ? sommeNotes / sommeCoeffs : 0;
+        
+        return {
+          ...etudiant,
+          notes: notesTableau,
+          moyenne_generale: moyenneGenerale
+        };
+      });
       
-      // Vérifier si tous les bulletins sont générés
-      const allGenerated = mockEtudiants.every(etudiant => 
-        mockBulletins.some(bulletin => bulletin.etudiant === etudiant.id)
-      );
-      setAllBulletinsGenerated(allGenerated);
+      setEtudiants(etudiantsData);
+      setBulletins(etudiantsBulletins);
     } catch (error) {
       console.error('Erreur lors du chargement des données de classe:', error);
       showSnackbar('Erreur lors du chargement des données', 'error');

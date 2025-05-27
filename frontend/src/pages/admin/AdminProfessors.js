@@ -32,6 +32,7 @@ import {
 import { professeurService } from '../../utils/apiService';
 import { NIVEAUX_INGENIEUR, FILIERES_CHOICES } from '../../utils/constants';
 import { ENTITY_KEYS, markEntityAsDeleted, isEntityDeleted } from '../../utils/persistenceManager';
+import { formatProfesseurData, transformProfesseurFromApi } from '../../utils/formatApiData';
 
 // Utilisation des API REST pour la gestion des professeurs avec fallback localStorage
 
@@ -83,7 +84,13 @@ const AdminProfessors = () => {
         console.log('Données de professeurs récupérées depuis l\'API');
         
         if (Array.isArray(professeursData)) {
-          setProfesseurs(professeursData);
+          // Transformer les données pour le format du frontend
+          const formattedProfesseurs = professeursData.map(professeur => 
+            transformProfesseurFromApi(professeur)
+          );
+          
+          console.log('Professeurs formatés pour le frontend:', formattedProfesseurs);
+          setProfesseurs(formattedProfesseurs);
           
           // Si le tableau est vide, marquer l'entité comme supprimée
           if (professeursData.length === 0) {
@@ -113,27 +120,55 @@ const AdminProfessors = () => {
     if (type === 'edit' && professeur) {
       setCurrentProfesseur(professeur);
       
-      // Convertir l'ancienne spécialité en tableau de filières si nécessaire
-      let filieres = professeur.filieres || [];
+      // Préparation des filières
+      let filieres = Array.isArray(professeur.filieres) ? professeur.filieres : [];
+      
+      // Si les filières sont une chaîne de caractères, les convertir en tableau
+      if (typeof professeur.filieres === 'string' && professeur.filieres) {
+        filieres = professeur.filieres.split(',');
+      }
       
       // Si l'ancien champ specialite existe et que filieres est vide, essayer de le convertir
       if (professeur.specialite && (!filieres || filieres.length === 0)) {
         // Chercher si la spécialité correspond à l'une des filières
         const filiereMatch = FILIERES_CHOICES.find(f => 
-          f.label.toLowerCase().includes(professeur.specialite.toLowerCase()) || 
-          f.value.toLowerCase().includes(professeur.specialite.toLowerCase())
+          f.nom.toLowerCase().includes(professeur.specialite.toLowerCase())
         );
-        
         if (filiereMatch) {
-          filieres = [filiereMatch.value];
+          filieres = [filiereMatch.id.toString()];
+        } else {
+          // Sinon, définir comme une filière générique
+          filieres = ['IIR'];
         }
       }
       
+      // Préparation des niveaux d'enseignement
+      let niveaux = [];
+      
+      // Vérifier si niveaux_enseignes existe et le convertir en tableau si c'est une chaîne
+      if (professeur.niveaux_enseignes) {
+        if (typeof professeur.niveaux_enseignes === 'string') {
+          niveaux = professeur.niveaux_enseignes.split(',');
+        } else if (Array.isArray(professeur.niveaux_enseignes)) {
+          niveaux = professeur.niveaux_enseignes;
+        }
+      }
+      
+      // Mettre à jour le formulaire avec les données du professeur
       setFormData({
-        ...professeur,
+        nom: professeur.nom || '',
+        prenom: professeur.prenom || '',
+        email: professeur.email || '',
+        telephone: professeur.telephone || '',
         filieres: filieres,
         date_embauche: professeur.date_embauche || '',
-        niveaux: professeur.niveaux || []
+        niveaux: niveaux
+      });
+      
+      console.log('Formulaire initialisé avec les données:', {
+        filieres,
+        niveaux,
+        professeur
       });
     } else {
       // Réinitialiser le formulaire pour la création
@@ -144,7 +179,7 @@ const AdminProfessors = () => {
         email: '',
         telephone: '',
         filieres: [],
-        date_embauche: '',
+        date_embauche: new Date().toISOString().split('T')[0],
         niveaux: []
       });
     }
@@ -204,6 +239,37 @@ const AdminProfessors = () => {
     }
   };
 
+  // Vérifier si un email existe déjà parmi les professeurs
+  const checkEmailExists = (email) => {
+    // Si nous sommes en mode édition, exclure le professeur actuel
+    if (formType === 'edit' && currentProfesseur) {
+      return professeurs.some(p => p.email === email && p.id !== currentProfesseur.id);
+    }
+    // Pour un nouvel ajout, vérifier tous les professeurs
+    return professeurs.some(p => p.email === email);
+  };
+  
+  // Générer un email unique si nécessaire
+  const generateUniqueEmail = (nom, prenom) => {
+    const baseEmail = `${prenom.toLowerCase()}.${nom.toLowerCase()}@ecole.fr`;
+    
+    // Si l'email de base n'existe pas, l'utiliser
+    if (!checkEmailExists(baseEmail)) {
+      return baseEmail;
+    }
+    
+    // Sinon, ajouter un numéro jusqu'à trouver un email unique
+    let counter = 1;
+    let newEmail = `${prenom.toLowerCase()}.${nom.toLowerCase()}${counter}@ecole.fr`;
+    
+    while (checkEmailExists(newEmail) && counter < 100) {
+      counter++;
+      newEmail = `${prenom.toLowerCase()}.${nom.toLowerCase()}${counter}@ecole.fr`;
+    }
+    
+    return newEmail;
+  };
+  
   const validateForm = () => {
     const errors = {};
     
@@ -212,7 +278,18 @@ const AdminProfessors = () => {
     if (!formData.prenom) errors.prenom = 'Le prénom est requis';
     if (!formData.email) errors.email = 'L\'email est requis';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Format d\'email invalide';
-    if (!formData.specialite) errors.specialite = 'La spécialité est requise';
+    else if (checkEmailExists(formData.email)) {
+      // Si l'email existe déjà, générer une suggestion
+      const suggestionEmail = generateUniqueEmail(formData.nom, formData.prenom);
+      errors.email = `Cet email existe déjà. Suggestion: ${suggestionEmail}`;
+      // Proposer d'utiliser la suggestion
+      setFormData(prev => ({
+        ...prev,
+        email: suggestionEmail
+      }));
+    }
+    
+    // La validation du champ specialite a été supprimée car remplacée par filieres
     if (!formData.niveaux || formData.niveaux.length === 0) errors.niveaux = 'Sélectionnez au moins un niveau d\'enseignement';
     
     setFormErrors(errors);
@@ -223,29 +300,88 @@ const AdminProfessors = () => {
     if (!validateForm()) return;
     
     try {
-      if (formType === 'create') {
-        // Créer un nouveau professeur via l'API REST
-        const newProfesseur = await professeurService.create(formData);
-        console.log('Professeur créé avec succès:', newProfesseur);
+      // Vérifier d'abord si l'email existe déjà et générer un email unique si nécessaire
+      if (checkEmailExists(formData.email)) {
+        const uniqueEmail = generateUniqueEmail(formData.nom, formData.prenom);
+        console.log(`Email en double détecté (${formData.email}), utilisation d'une alternative: ${uniqueEmail}`);
         
-        // Mettre à jour l'état local
-        setProfesseurs([...professeurs, newProfesseur]);
-        showSnackbar('Professeur ajouté avec succès', 'success');
+        // Mettre à jour le formulaire avec l'email unique généré
+        formData.email = uniqueEmail;
+      }
+      
+      // Formater les données pour l'API en utilisant notre utilitaire
+      const dataToSend = formatProfesseurData(formData);
+      
+      console.log('Données formatées envoyées au backend:', dataToSend);
+      
+      if (formType === 'create') {
+        // Dès qu'on ajoute un professeur, on réinitialise le marquage de suppression
+        localStorage.removeItem(`${ENTITY_KEYS.PROFESSEURS}_deleted`);
+        console.log('Marquage de suppression des professeurs réinitialisé');
+        
+        try {
+          // Créer un nouveau professeur via l'API REST
+          const newProfesseur = await professeurService.create(dataToSend);
+          console.log('Professeur créé avec succès:', newProfesseur);
+          
+          // Transformer les données reçues pour le format du frontend
+          const formattedProfesseur = transformProfesseurFromApi(newProfesseur);
+          
+          // Mettre à jour l'état local
+          setProfesseurs([...professeurs, formattedProfesseur]);
+          showSnackbar('Professeur ajouté avec succès', 'success');
+          
+          // Fermer le formulaire sans appeler loadData() car nous avons déjà mis à jour l'état local
+          handleCloseForm();
+        } catch (error) {
+          console.error('Erreur lors de la création du professeur:', error);
+          
+          // Vérifier si c'est une erreur d'email en double
+          if (error.response && error.response.data && error.response.data.email) {
+            // Générer un nouvel email et réessayer
+            const retryEmail = generateUniqueEmail(formData.nom, formData.prenom) + Date.now() % 1000;
+            formData.email = retryEmail;
+            
+            console.log(`Nouvel essai avec l'email: ${retryEmail}`);
+            dataToSend.email = retryEmail;
+            
+            // Réessayer avec le nouvel email
+            try {
+              const newProfesseur = await professeurService.create(dataToSend);
+              console.log('Professeur créé avec succès après réessai:', newProfesseur);
+              
+              const formattedProfesseur = transformProfesseurFromApi(newProfesseur);
+              setProfesseurs([...professeurs, formattedProfesseur]);
+              showSnackbar('Professeur ajouté avec succès', 'success');
+              
+              // Fermer le formulaire sans appeler loadData()
+              handleCloseForm();
+              return;
+            } catch (retryError) {
+              throw retryError; // Si le réessai échoue, propager l'erreur
+            }
+          } else {
+            throw error; // Propager l'erreur originale si ce n'est pas un problème d'email
+          }
+        }
       } else if (currentProfesseur) {
         // Mettre à jour le professeur via l'API REST
-        const updatedProfesseur = await professeurService.update(currentProfesseur.id, formData);
+        const updatedProfesseur = await professeurService.update(currentProfesseur.id, dataToSend);
         console.log('Professeur mis à jour avec succès:', updatedProfesseur);
+        
+        // Transformer les données reçues pour le format du frontend
+        const formattedProfesseur = transformProfesseurFromApi(updatedProfesseur);
         
         // Mettre à jour l'état local
         const updatedProfesseurs = professeurs.map(professeur => 
-          professeur.id === currentProfesseur.id ? updatedProfesseur : professeur
+          professeur.id === currentProfesseur.id ? formattedProfesseur : professeur
         );
         setProfesseurs(updatedProfesseurs);
         showSnackbar('Professeur modifié avec succès', 'success');
+        
+        // Fermer le formulaire sans appeler loadData()
+        handleCloseForm();
       }
-      
-      // Fermer le formulaire sans appeler loadData() car nous avons déjà mis à jour l'état local
-      handleCloseForm();
     } catch (error) {
       console.error('Erreur lors de la soumission du formulaire:', error);
       showSnackbar('Erreur lors de l\'enregistrement: ' + (error.message || 'Erreur inconnue'), 'error');
@@ -349,27 +485,69 @@ const AdminProfessors = () => {
     { field: 'prenom', headerName: 'Prénom', width: 130 },
     { field: 'email', headerName: 'Email', width: 200 },
     { field: 'telephone', headerName: 'Téléphone', width: 130 },
-    { field: 'specialite', headerName: 'Spécialité', width: 150 },
+    { 
+      field: 'filieres', 
+      headerName: 'Filières', 
+      width: 150,
+      renderCell: (params) => {
+        const filieresValues = params.value || [];
+        return (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {filieresValues.map(value => {
+              const filiere = FILIERES_CHOICES.find(f => f.value === value);
+              return filiere ? (
+                <Chip 
+                  key={value} 
+                  label={filiere.label} 
+                  size="small" 
+                  color="secondary" 
+                  variant="outlined" 
+                />
+              ) : (
+                // Fallback si l'identifiant exact n'est pas trouvé
+                <Chip 
+                  key={value} 
+                  label={value} 
+                  size="small" 
+                  color="default" 
+                  variant="outlined" 
+                />
+              );
+            })}
+          </Box>
+        );
+      }
+    },
     { field: 'date_embauche', headerName: 'Date d\'embauche', width: 150 },
     { 
       field: 'niveaux', 
       headerName: 'Niveaux d\'enseignement', 
       width: 200,
       renderCell: (params) => {
-        const niveauxIds = params.value || [];
+        const niveauxValues = params.value || [];
         return (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {niveauxIds.map(id => {
-              const niveau = NIVEAUX_INGENIEUR.find(n => n.id.toString() === id.toString());
+            {niveauxValues.map(value => {
+              // Trouver le niveau correspondant (les niveaux sont stockés en tant que nombres dans l'API)
+              const niveau = NIVEAUX_INGENIEUR.find(n => n.id.toString() === value.toString());
               return niveau ? (
                 <Chip 
-                  key={id} 
+                  key={value} 
                   label={niveau.nom} 
                   size="small" 
                   color="primary" 
                   variant="outlined" 
                 />
-              ) : null;
+              ) : (
+                // Fallback si l'identifiant exact n'est pas trouvé
+                <Chip 
+                  key={value} 
+                  label={`Niveau ${value}`} 
+                  size="small" 
+                  color="default" 
+                  variant="outlined" 
+                />
+              );
             })}
           </Box>
         );

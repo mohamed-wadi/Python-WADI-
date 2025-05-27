@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // URL de base de l'API
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://localhost:8002/api';
 
 // Fonction pour synchroniser les professeurs
 export const syncProfesseurs = async () => {

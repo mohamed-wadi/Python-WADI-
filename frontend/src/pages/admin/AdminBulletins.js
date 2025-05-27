@@ -94,21 +94,17 @@ const AdminBulletins = () => {
   useEffect(() => {
     loadInitialData();
     
-    // Si les classes ne sont pas disponibles, nous initialisons avec des données statiques pour éviter l'erreur
-    // C'est une solution temporaire en attendant que l'API backend soit corrigée
-    setClasses([
-      { id: 1, nom: 'ijh', niveau: 'iuh8', annee_scolaire: '2024-2025' },
-      { id: 2, nom: 'vg66', niveau: '88', annee_scolaire: '2024-2025' },
-    ]);
+    // Ne plus utiliser de données statiques, laissons l'API backend gérer les données
+    // Si aucune donnée n'est disponible, nous montrerons un message à l'utilisateur
+    if (!classes || classes.length === 0) {
+      console.log('Aucune classe disponible dans l\'API, affichage d\'un tableau vide');
+      setClasses([]);
+    }
     
-    // Même chose pour les matières
-    setMatieres([
-      { id: 1, nom: 'Mathématiques', coefficient: 3, professeur: 1 },
-      { id: 2, nom: 'Français', coefficient: 2, professeur: 2 },
-      { id: 3, nom: 'Histoire-Géographie', coefficient: 2, professeur: 3 },
-      { id: 4, nom: 'Anglais', coefficient: 2, professeur: 4 },
-      { id: 5, nom: 'Physique-Chimie', coefficient: 2, professeur: 5 }
-    ]);
+    if (!matieres || matieres.length === 0) {
+      console.log('Aucune matière disponible dans l\'API, affichage d\'un tableau vide');
+      setMatieres([]);
+    }
   }, []);
   
   // Charger les étudiants lorsque la classe sélectionnée change

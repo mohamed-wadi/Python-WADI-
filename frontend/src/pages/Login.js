@@ -150,6 +150,25 @@ const Login = () => {
                   {loading ? <CircularProgress size={24} /> : 'Se connecter'}
                 </Button>
               </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <Box sx={{ textAlign: 'center', mt: 1 }}>
+                  <Typography
+                    component="a"
+                    href="http://localhost:8002/reset-admin-password/"
+                    variant="body2"
+                    sx={{ 
+                      color: 'primary.main', 
+                      textDecoration: 'none',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      } 
+                    }}
+                  >
+                    Mot de passe oublié ?
+                  </Typography>
+                </Box>
+              </motion.div>
             </Box>
           </Paper>
         </Grid>

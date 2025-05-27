@@ -196,14 +196,32 @@ const AdminClasses = () => {
       
       let result;
       if (formType === 'create') {
+        // Dès qu'on ajoute une classe, on réinitialise le marquage de suppression
+        localStorage.removeItem(`${ENTITY_KEYS.CLASSES}_deleted`);
+        console.log('Marquage de suppression des classes réinitialisé');
+        
         // Utiliser directement classeService.create au lieu de postData
         result = await classeService.create(classeData);
         console.log('Résultat de la création via API:', result);
+        
+        // Ajouter la nouvelle classe à l'état local sans recharger
+        if (result) {
+          setClasses(prevClasses => [...prevClasses, result]);
+        }
+        
         showSnackbar('Classe créée avec succès', 'success');
       } else {
         // Utiliser directement classeService.update au lieu de putData
         result = await classeService.update(currentClasse.id, classeData);
         console.log('Résultat de la mise à jour via API:', result);
+        
+        // Mettre à jour la classe dans l'état local sans recharger
+        if (result) {
+          setClasses(prevClasses => prevClasses.map(c => 
+            c.id === currentClasse.id ? result : c
+          ));
+        }
+        
         showSnackbar('Classe mise à jour avec succès', 'success');
       }
       
@@ -211,11 +229,6 @@ const AdminClasses = () => {
       
       // Fermer le formulaire
       handleCloseForm();
-      
-      // Attendre un peu avant de rafraîchir les données pour laisser le temps au serveur
-      setTimeout(async () => {
-        await loadData();
-      }, 500);
       
     } catch (error) {
       console.error('Erreur lors de la soumission du formulaire:', error);
