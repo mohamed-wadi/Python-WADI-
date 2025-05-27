@@ -6,6 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import createAppTheme from './utils/theme';
 import { loadDjangoData, setupAutoSync } from './utils/djangoDataLoader';
+import { preserveDeletedEntities } from './utils/preserveDeletedData';
 
 // Layouts
 import LoginLayout from './layouts/LoginLayout';
@@ -46,10 +47,16 @@ function AppContent() {
   useEffect(() => {
     if (user) {
       console.log('Initialisation de la synchronisation avec Django');
-      // Charger les données depuis Django au démarrage
+      
+      // D'abord, préserver les entités que l'utilisateur a délibérément supprimées
+      preserveDeletedEntities();
+      
+      // Ensuite, charger les données depuis Django au démarrage
       loadDjangoData().then(success => {
         if (success) {
           console.log('Données Django chargées avec succès');
+          // Préserver à nouveau les entités supprimées après le chargement
+          preserveDeletedEntities();
         } else {
           console.warn('Échec du chargement des données Django, utilisation des données locales uniquement');
         }

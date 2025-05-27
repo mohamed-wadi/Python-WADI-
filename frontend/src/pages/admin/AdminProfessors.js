@@ -30,8 +30,8 @@ import {
 } from '@mui/icons-material';
 
 import { professeurService } from '../../utils/apiService';
-
-import { NIVEAUX_INGENIEUR } from '../../utils/constants';
+import { NIVEAUX_INGENIEUR, FILIERES_CHOICES } from '../../utils/constants';
+import { ENTITY_KEYS, markEntityAsDeleted, isEntityDeleted } from '../../utils/persistenceManager';
 
 // Utilisation des API REST pour la gestion des professeurs avec fallback localStorage
 
@@ -46,7 +46,7 @@ const AdminProfessors = () => {
     prenom: '',
     email: '',
     telephone: '',
-    specialite: '',
+    filieres: [], // Tableau pour stocker les filières d'enseignement (remplace specialite)
     date_embauche: '',
     niveaux: [] // Tableau pour stocker les niveaux d'enseignement
   });
@@ -69,11 +69,30 @@ const AdminProfessors = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Vérifier si les professeurs ont été supprimés par l'utilisateur
+      if (isEntityDeleted(ENTITY_KEYS.PROFESSEURS)) {
+        console.log('Les professeurs ont été marqués comme supprimés, affichage d\'une liste vide');
+        setProfesseurs([]);
+        setLoading(false);
+        return;
+      }
+      
       // Chargement des professeurs depuis l'API REST
       try {
         const professeursData = await professeurService.getAll();
         console.log('Données de professeurs récupérées depuis l\'API');
-        setProfesseurs(Array.isArray(professeursData) ? professeursData : []);
+        
+        if (Array.isArray(professeursData)) {
+          setProfesseurs(professeursData);
+          
+          // Si le tableau est vide, marquer l'entité comme supprimée
+          if (professeursData.length === 0) {
+            markEntityAsDeleted(ENTITY_KEYS.PROFESSEURS);
+          }
+        } else {
+          console.warn('Format de données inattendu:', professeursData);
+          setProfesseurs([]);
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des professeurs depuis l\'API:', error);
         setProfesseurs([]);
@@ -93,8 +112,26 @@ const AdminProfessors = () => {
     
     if (type === 'edit' && professeur) {
       setCurrentProfesseur(professeur);
+      
+      // Convertir l'ancienne spécialité en tableau de filières si nécessaire
+      let filieres = professeur.filieres || [];
+      
+      // Si l'ancien champ specialite existe et que filieres est vide, essayer de le convertir
+      if (professeur.specialite && (!filieres || filieres.length === 0)) {
+        // Chercher si la spécialité correspond à l'une des filières
+        const filiereMatch = FILIERES_CHOICES.find(f => 
+          f.label.toLowerCase().includes(professeur.specialite.toLowerCase()) || 
+          f.value.toLowerCase().includes(professeur.specialite.toLowerCase())
+        );
+        
+        if (filiereMatch) {
+          filieres = [filiereMatch.value];
+        }
+      }
+      
       setFormData({
         ...professeur,
+        filieres: filieres,
         date_embauche: professeur.date_embauche || '',
         niveaux: professeur.niveaux || []
       });
@@ -106,7 +143,7 @@ const AdminProfessors = () => {
         prenom: '',
         email: '',
         telephone: '',
-        specialite: '',
+        filieres: [],
         date_embauche: '',
         niveaux: []
       });
@@ -150,11 +187,28 @@ const AdminProfessors = () => {
       });
     }
   };
+  
+  // Gestion spécifique pour la sélection multiple des filières
+  const handleFilieresChange = (event) => {
+    const { value } = event.target;
+    setFormData({
+      ...formData,
+      filieres: typeof value === 'string' ? value.split(',') : value
+    });
+    
+    if (formErrors.filieres) {
+      setFormErrors({
+        ...formErrors,
+        filieres: ''
+      });
+    }
+  };
 
   const validateForm = () => {
     const errors = {};
     
     if (!formData.nom) errors.nom = 'Le nom est requis';
+    if (!formData.filieres || formData.filieres.length === 0) errors.filieres = 'Au moins une filière est requise';
     if (!formData.prenom) errors.prenom = 'Le prénom est requis';
     if (!formData.email) errors.email = 'L\'email est requis';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Format d\'email invalide';
@@ -205,32 +259,64 @@ const AdminProfessors = () => {
 
   const handleConfirmDelete = async () => {
     try {
+      let deleted = false;
+      let allDeleted = false;
+      
       if (professeurToDelete) {
-        // Suppression via l'API REST
-        await professeurService.delete(professeurToDelete.id);
-        
-        // Mettre à jour l'état local
-        const updatedProfesseurs = professeurs.filter(professeur => professeur.id !== professeurToDelete.id);
-        setProfesseurs(updatedProfesseurs);
-        showSnackbar('Professeur supprimé avec succès', 'success');
-        
-      } else if (selectedRows.length > 0) {
-        // Suppression multiple via l'API REST
-        for (const id of selectedRows) {
-          await professeurService.delete(id);
+        // Suppression d'un seul professeur
+        try {
+          await professeurService.delete(professeurToDelete.id);
+          
+          // Mettre à jour l'état local
+          const updatedProfesseurs = professeurs.filter(p => p.id !== professeurToDelete.id);
+          setProfesseurs(updatedProfesseurs);
+          deleted = true;
+          
+          // Vérifier si c'était le dernier professeur
+          if (updatedProfesseurs.length === 0) {
+            allDeleted = true;
+          }
+          
+          showSnackbar('Professeur supprimé avec succès', 'success');
+        } catch (error) {
+          console.error('Erreur lors de la suppression du professeur:', error);
+          showSnackbar('Erreur lors de la suppression', 'error');
         }
-        
-        // Mettre à jour l'état local
-        const updatedProfesseurs = professeurs.filter(professeur => !selectedRows.includes(professeur.id));
-        setProfesseurs(updatedProfesseurs);
-        showSnackbar(`${selectedRows.length} professeurs supprimés avec succès`, 'success');
-        setSelectedRows([]);
-      } else {
-        return; // Aucun élément à supprimer
+      } else if (selectedRows.length > 0) {
+        // Suppression multiple
+        try {
+          // Créer un tableau de promesses pour la suppression
+          const deletePromises = selectedRows.map(id => professeurService.delete(id));
+          
+          // Attendre que toutes les suppressions soient terminées
+          await Promise.all(deletePromises);
+          deleted = true;
+          
+          // Mettre à jour l'état local
+          const updatedProfesseurs = professeurs.filter(p => !selectedRows.includes(p.id));
+          setProfesseurs(updatedProfesseurs);
+          
+          // Vérifier si tous les professeurs ont été supprimés
+          if (updatedProfesseurs.length === 0) {
+            allDeleted = true;
+          }
+          
+          showSnackbar(`${selectedRows.length} professeurs supprimés avec succès`, 'success');
+          setSelectedRows([]);
+        } catch (error) {
+          console.error('Erreur lors de la suppression multiple de professeurs:', error);
+          showSnackbar('Erreur lors de la suppression des professeurs sélectionnés', 'error');
+        }
+      }
+      
+      // Si tous les professeurs ont été supprimés, marquer l'entité comme supprimée
+      if (deleted && allDeleted) {
+        console.log('Tous les professeurs ont été supprimés, marquage comme supprimés');
+        markEntityAsDeleted(ENTITY_KEYS.PROFESSEURS);
       }
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
-      showSnackbar('Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'), 'error');
+      showSnackbar('Une erreur est survenue', 'error');
     } finally {
       setOpenConfirm(false);
       setProfesseurToDelete(null);
@@ -430,16 +516,46 @@ const AdminProfessors = () => {
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField
-                name="specialite"
-                label="Spécialité"
-                value={formData.specialite}
-                onChange={handleInputChange}
-                fullWidth
+              <FormControl 
+                fullWidth 
+                error={Boolean(formErrors.filieres)}
                 required
-                error={Boolean(formErrors.specialite)}
-                helperText={formErrors.specialite}
-              />
+              >
+                <InputLabel id="filieres-label">Filières d'enseignement</InputLabel>
+                <Select
+                  labelId="filieres-label"
+                  id="filieres"
+                  multiple
+                  name="filieres"
+                  value={formData.filieres || []}
+                  onChange={handleFilieresChange}
+                  input={<OutlinedInput id="select-filieres" label="Filières d'enseignement" />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const filiere = FILIERES_CHOICES.find(f => f.value === value);
+                        return (
+                          <Chip 
+                            key={value} 
+                            label={filiere ? filiere.label : value} 
+                            color="secondary"
+                            variant="outlined" 
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                >
+                  {FILIERES_CHOICES.map((filiere) => (
+                    <MenuItem key={filiere.value} value={filiere.value}>
+                      {filiere.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {Boolean(formErrors.filieres) && (
+                  <FormHelperText>{formErrors.filieres}</FormHelperText>
+                )}
+              </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField

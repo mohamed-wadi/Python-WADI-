@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 
 import { matiereService, professeurService, classeService } from '../../utils/apiService';
+import { ENTITY_KEYS, markEntityAsDeleted, isEntityDeleted } from '../../utils/persistenceManager';
 
 // Utilisation des API REST pour la gestion des matières avec fallback localStorage
 
@@ -67,36 +68,56 @@ const AdminSubjects = () => {
 
   const loadData = async () => {
     setLoading(true);
-    
     try {
-      // Chargement des professeurs depuis l'API REST
+      // Vérifier si les matières ont été supprimées par l'utilisateur
+      const matieresDeleted = isEntityDeleted(ENTITY_KEYS.MATIERES);
+      
+      // Chargement des professeurs depuis l'API REST pour la liste déroulante
       try {
         const professeursData = await professeurService.getAll();
-        console.log('Professeurs chargés depuis l\'API');
+        console.log('Données de professeurs récupérées depuis l\'API');
         setProfesseurs(Array.isArray(professeursData) ? professeursData : []);
       } catch (error) {
         console.error('Erreur lors du chargement des professeurs depuis l\'API:', error);
         setProfesseurs([]);
       }
       
-      // Chargement des classes depuis l'API REST
+      // Chargement des classes depuis l'API REST pour la liste déroulante
       try {
         const classesData = await classeService.getAll();
-        console.log('Classes chargées depuis l\'API');
+        console.log('Données de classes récupérées depuis l\'API');
         setClasses(Array.isArray(classesData) ? classesData : []);
       } catch (error) {
         console.error('Erreur lors du chargement des classes depuis l\'API:', error);
         setClasses([]);
       }
       
-      // Chargement des matières depuis l'API REST
-      try {
-        const matieresData = await matiereService.getAll();
-        console.log('Matières chargées depuis l\'API');
-        setMatieres(Array.isArray(matieresData) ? matieresData : []);
-      } catch (error) {
-        console.error('Erreur lors du chargement des matières depuis l\'API:', error);
+      // Si les matières ont été supprimées, afficher une liste vide
+      if (matieresDeleted) {
+        console.log('Les matières ont été marquées comme supprimées, affichage d\'une liste vide');
         setMatieres([]);
+      } else {
+        // Chargement des matières depuis l'API REST
+        try {
+          const matieresData = await matiereService.getAll();
+          console.log('Données de matières récupérées depuis l\'API');
+          
+          if (Array.isArray(matieresData)) {
+            setMatieres(matieresData);
+            
+            // Si le tableau est vide, marquer l'entité comme supprimée
+            if (matieresData.length === 0) {
+              markEntityAsDeleted(ENTITY_KEYS.MATIERES);
+            }
+          } else {
+            console.warn('Format de données inattendu:', matieresData);
+            setMatieres([]);
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des matières depuis l\'API:', error);
+          setMatieres([]);
+          showSnackbar('Erreur lors du chargement des matières', 'error');
+        }
       }
     } catch (error) {
       console.error('Erreur générale lors du chargement des données:', error);
@@ -211,28 +232,60 @@ const AdminSubjects = () => {
 
   const handleConfirmDelete = async () => {
     try {
+      let deleted = false;
+      let allDeleted = false;
+      
       if (matiereToDelete) {
-        // Suppression via l'API REST
-        await matiereService.delete(matiereToDelete.id);
-        
-        // Mettre à jour l'état local
-        const updatedMatieres = matieres.filter(matiere => matiere.id !== matiereToDelete.id);
-        setMatieres(updatedMatieres);
-        showSnackbar('Matière supprimée avec succès', 'success');
-        
-      } else if (selectedRows.length > 0) {
-        // Suppression multiple via l'API REST
-        for (const id of selectedRows) {
-          await matiereService.delete(id);
+        // Suppression d'une seule matière
+        try {
+          await matiereService.delete(matiereToDelete.id);
+          
+          // Mettre à jour l'état local
+          const updatedMatieres = matieres.filter(matiere => matiere.id !== matiereToDelete.id);
+          setMatieres(updatedMatieres);
+          deleted = true;
+          
+          // Vérifier si c'était la dernière matière
+          if (updatedMatieres.length === 0) {
+            allDeleted = true;
+          }
+          
+          showSnackbar('Matière supprimée avec succès', 'success');
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la matière:', error);
+          showSnackbar('Erreur lors de la suppression', 'error');
         }
-        
-        // Mettre à jour l'état local
-        const updatedMatieres = matieres.filter(matiere => !selectedRows.includes(matiere.id));
-        setMatieres(updatedMatieres);
-        showSnackbar(`${selectedRows.length} matières supprimées avec succès`, 'success');
-        setSelectedRows([]);
-      } else {
-        return; // Aucun élément à supprimer
+      } else if (selectedRows.length > 0) {
+        // Suppression multiple
+        try {
+          // Créer un tableau de promesses pour la suppression
+          const deletePromises = selectedRows.map(id => matiereService.delete(id));
+          
+          // Attendre que toutes les suppressions soient terminées
+          await Promise.all(deletePromises);
+          deleted = true;
+          
+          // Mettre à jour l'état local
+          const updatedMatieres = matieres.filter(matiere => !selectedRows.includes(matiere.id));
+          setMatieres(updatedMatieres);
+          
+          // Vérifier si toutes les matières ont été supprimées
+          if (updatedMatieres.length === 0) {
+            allDeleted = true;
+          }
+          
+          showSnackbar(`${selectedRows.length} matières supprimées avec succès`, 'success');
+          setSelectedRows([]);
+        } catch (error) {
+          console.error('Erreur lors de la suppression multiple de matières:', error);
+          showSnackbar('Erreur lors de la suppression des matières sélectionnées', 'error');
+        }
+      }
+      
+      // Si toutes les matières ont été supprimées, marquer l'entité comme supprimée
+      if (deleted && allDeleted) {
+        console.log('Toutes les matières ont été supprimées, marquage comme supprimées');
+        markEntityAsDeleted(ENTITY_KEYS.MATIERES);
       }
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);

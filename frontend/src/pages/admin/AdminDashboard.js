@@ -8,10 +8,12 @@ import {
   Person as PersonIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { fetchAdminDashboard } from '../../utils/api';
 import StatCard from '../../components/Dashboard/StatCard';
-import { STORAGE_KEYS, EVENTS, getActiveItems } from '../../utils/localStorageManager';
 import EventBus from '../../utils/eventBus';
+import { ENTITY_KEYS, isEntityDeleted } from '../../utils/persistenceManager';
+
+// Retour à l'utilisation des services API (avec URLs relatives)
+import { etudiantService, professeurService, classeService, matiereService, dashboardService } from '../../utils/apiService';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -23,34 +25,17 @@ const AdminDashboard = () => {
     // Charger les données initiales
     loadDynamicDashboardData();
     
-    // Écouter les changements dans le localStorage depuis d'autres onglets
-    window.addEventListener('storage', handleStorageChange);
-    
     // S'abonner aux événements de changement de données dans la même fenêtre
-    const unsubscribeDataChanged = EventBus.subscribe(EVENTS.DATA_CHANGED, () => {
+    const unsubscribeDataChanged = EventBus.subscribe('data_changed', () => {
       console.log('Tableau de bord: Notification de changement de données reçue');
       loadDynamicDashboardData();
     });
     
     // Nettoyage des listeners si le composant est démonté
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       unsubscribeDataChanged(); // Se désabonner de l'événement
     };
   }, []);
-  
-  // Fonction pour gérer les changements dans le localStorage depuis d'autres onglets
-  const handleStorageChange = (event) => {
-    console.log('Détection de changement dans localStorage:', event.key);
-    if ([
-      STORAGE_KEYS.ETUDIANTS, 
-      STORAGE_KEYS.PROFESSEURS, 
-      STORAGE_KEYS.CLASSES, 
-      STORAGE_KEYS.MATIERES
-    ].includes(event.key)) {
-      loadDynamicDashboardData();
-    }
-  };
   
   // Rafraîchir manuellement les données du tableau de bord
   const refreshDashboard = () => {
@@ -58,45 +43,118 @@ const AdminDashboard = () => {
     loadDynamicDashboardData();
   };
   
-  // Charger les données dynamiquement depuis le localStorage
-  const loadDynamicDashboardData = () => {
-    setLoading(true);
-    
+  // Récupérer les données réelles du localStorage en cas d'échec de l'API
+  const getLocalStorageData = () => {
     try {
-      // Récupérer les éléments actifs uniquement (non supprimés)
-      const etudiantsActifs = getActiveItems(STORAGE_KEYS.ETUDIANTS);
-      const professeursActifs = getActiveItems(STORAGE_KEYS.PROFESSEURS);
-      const classesActives = getActiveItems(STORAGE_KEYS.CLASSES);
-      const matieresActives = getActiveItems(STORAGE_KEYS.MATIERES);
+      // Vérifier quelles entités ont été supprimées
+      const classesDeleted = isEntityDeleted(ENTITY_KEYS.CLASSES);
+      const professeursDeleted = isEntityDeleted(ENTITY_KEYS.PROFESSEURS);
+      const matieresDeleted = isEntityDeleted(ENTITY_KEYS.MATIERES);
+      const etudiantsDeleted = isEntityDeleted(ENTITY_KEYS.ETUDIANTS);
       
-      // Compter par niveau d'ingénieur (ING1 à ING5)
+      // Récupérer les étudiants du localStorage
+      const localEtudiants = etudiantsDeleted ? [] : JSON.parse(localStorage.getItem('schoolAppEtudiants')) || [];
+      console.log('Etudiants récupérés du localStorage:', localEtudiants.length);
+      
+      // Récupérer les professeurs du localStorage
+      const localProfesseurs = professeursDeleted ? [] : JSON.parse(localStorage.getItem('schoolAppProfesseurs')) || [];
+      console.log('Professeurs récupérés du localStorage:', localProfesseurs.length);
+      
+      // Récupérer les classes du localStorage
+      const localClasses = classesDeleted ? [] : JSON.parse(localStorage.getItem('schoolAppClasses')) || [];
+      console.log('Classes récupérées du localStorage:', localClasses.length);
+      
+      // Récupérer les matières du localStorage
+      const localMatieres = matieresDeleted ? [] : JSON.parse(localStorage.getItem('schoolAppMatieres')) || [];
+      console.log('Matières récupérées du localStorage:', localMatieres.length);
+      
+      // Calculer la répartition des étudiants par classe
+      const repartitionClasses = [];
       const etudiantsParNiveau = {};
-      etudiantsActifs.forEach(etudiant => {
-        const niveau = etudiant.niveau || '1';
-        etudiantsParNiveau[niveau] = (etudiantsParNiveau[niveau] || 0) + 1;
+      
+      // Pour chaque classe, compter les étudiants
+      localClasses.forEach(classe => {
+        const etudiantsInClasse = localEtudiants.filter(e => e.classe === classe.id).length;
+        const niveau = classe.niveau?.toString() || '1';
+        
+        repartitionClasses.push({
+          classe: classe,
+          nb_etudiants: etudiantsInClasse
+        });
+        
+        // Ajouter au compteur par niveau
+        etudiantsParNiveau[niveau] = (etudiantsParNiveau[niveau] || 0) + etudiantsInClasse;
       });
       
-      const dashboardData = {
-        nb_etudiants: etudiantsActifs.length,
-        nb_professeurs: professeursActifs.length,
-        nb_classes: classesActives.length,
-        nb_matieres: matieresActives.length,
+      return {
+        nb_etudiants: localEtudiants.length,
+        nb_professeurs: localProfesseurs.length,
+        nb_classes: localClasses.length,
+        nb_matieres: localMatieres.length,
+        repartition_classes: repartitionClasses,
         etudiants_par_niveau: etudiantsParNiveau
       };
-      
-      console.log('Données dynamiques du tableau de bord:', dashboardData);
-      setDashboardData(dashboardData);
     } catch (error) {
-      console.error('Erreur lors du chargement des données du tableau de bord:', error);
-      setError('Erreur lors du chargement des données');
-      // Utiliser des valeurs par défaut en cas d'erreur
-      setDashboardData({
+      console.error('Erreur lors de la récupération des données du localStorage:', error);
+      // Données par défaut en cas d'erreur
+      return {
         nb_etudiants: 0,
         nb_professeurs: 0,
         nb_classes: 0,
         nb_matieres: 0,
+        repartition_classes: [],
         etudiants_par_niveau: {}
-      });
+      };
+    }
+  };
+
+  // Charger les données dynamiquement depuis l'API REST
+  const loadDynamicDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Essayer de récupérer les données depuis l'API dashboard
+      console.log('Tentative de connexion à l\'API dashboard...');
+      const data = await dashboardService.getAdminStats();
+      
+      console.log('Données récupérées depuis l\'API dashboard:', data);
+      
+      // Créer un objet avec les données récupérées ou des valeurs par défaut
+      const dashboardData = {
+        nb_etudiants: data.nb_etudiants || 0,
+        nb_professeurs: data.nb_professeurs || 0,
+        nb_classes: data.nb_classes || 0,
+        nb_matieres: data.nb_matieres || 0,
+        repartition_classes: data.repartition_classes || [],
+        repartition_matieres: data.repartition_matieres || []
+      };
+      
+      // Extraire les données par niveau d'ingénieur si disponibles
+      const etudiantsParNiveau = {};
+      if (data.repartition_classes) {
+        data.repartition_classes.forEach(item => {
+          if (item.classe && item.classe.niveau) {
+            const niveau = item.classe.niveau;
+            etudiantsParNiveau[niveau] = (etudiantsParNiveau[niveau] || 0) + item.nb_etudiants;
+          }
+        });
+        dashboardData.etudiants_par_niveau = etudiantsParNiveau;
+      }
+      
+      console.log('Données traitées du tableau de bord:', dashboardData);
+      setDashboardData(dashboardData);
+    } catch (error) {
+      console.error('Erreur lors du chargement des données du tableau de bord:', error);
+      console.log('Utilisation des données réelles du localStorage comme fallback');
+      
+      // Récupérer les données réelles du localStorage au lieu des données mockées
+      const localData = getLocalStorageData();
+      console.log('Données récupérées du localStorage pour le tableau de bord:', localData);
+      setDashboardData(localData);
+      
+      // Afficher un message d'avertissement au lieu d'une erreur
+      setError('Connexion à l\'API impossible - Données locales utilisées');
     } finally {
       setLoading(false);
     }
@@ -125,13 +183,21 @@ const AdminDashboard = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box sx={{ padding: 2 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
+  // Afficher une alerte si une erreur est détectée, mais continuer à afficher le dashboard avec les données mockées
+  const errorAlert = error ? (
+    <Box sx={{ mb: 2 }}>
+      <Alert 
+        severity="warning" 
+        action={
+          <Button color="inherit" size="small" onClick={refreshDashboard}>
+            Réessayer
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
+    </Box>
+  ) : null;
 
   return (
     <Box sx={{ 
@@ -139,9 +205,22 @@ const AdminDashboard = () => {
       paddingLeft: { xs: 2, md: 1 }, // Réduction du padding à gauche
       marginLeft: 0 // S'assurer qu'il n'y a pas de marge à gauche
     }}>
-      <Typography variant="h4" gutterBottom>
-        Tableau de bord
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4">
+          Tableau de bord
+        </Typography>
+        <Button 
+          startIcon={<RefreshIcon />} 
+          variant="outlined" 
+          onClick={refreshDashboard}
+          size="small"
+        >
+          Actualiser
+        </Button>
+      </Box>
+      
+      {/* Afficher l'alerte d'erreur si nécessaire */}
+      {errorAlert}
       
       <Box sx={{ mb: 3 }}> {/* Réduction de l'espacement */}
         <Typography variant="h6" gutterBottom>

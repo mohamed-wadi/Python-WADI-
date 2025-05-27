@@ -28,8 +28,13 @@ import {
   School as SchoolIcon
 } from '@mui/icons-material';
 
+// Utilisation exclusive de l'API REST via le service dédié
 import { classeService } from '../../utils/apiService';
 import { NIVEAUX_INGENIEUR, FILIERES_CHOICES } from '../../utils/constants';
+import { ENTITY_KEYS, markEntityAsDeleted, isEntityDeleted } from '../../utils/persistenceManager';
+
+// Note: Nous gardons la référence au service localStorage au cas où nous aurions besoin de revenir en arrière
+// import { classeLocalService } from '../../utils/localStorageService';
 
 // Utilisation des API REST pour la gestion des classes avec fallback localStorage
 
@@ -65,11 +70,38 @@ const AdminClasses = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Chargement des classes depuis l'API REST
+      // Vider les données actuelles pour éviter d'afficher des données périmées
+      setClasses([]);
+      
+      // Vérifier si les classes ont été supprimées par l'utilisateur
+      if (isEntityDeleted(ENTITY_KEYS.CLASSES)) {
+        console.log('Les classes ont été marquées comme supprimées, affichage d\'une liste vide');
+        setClasses([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Retour à l'utilisation de l'API REST pour charger les classes
       try {
+        console.log('Chargement des classes depuis l\'API...');
+        // Forcer un délai court pour s'assurer que le serveur a bien traité les dernières requêtes
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const classesData = await classeService.getAll();
-        console.log('Données de classes récupérées depuis l\'API');
-        setClasses(Array.isArray(classesData) ? classesData : []);
+        console.log('Données de classes récupérées depuis l\'API:', classesData);
+        
+        if (Array.isArray(classesData)) {
+          // Mise à jour de l'état avec les nouvelles données
+          setClasses(classesData);
+          
+          // Si le tableau est vide, marquer l'entité comme supprimée
+          if (classesData.length === 0) {
+            markEntityAsDeleted(ENTITY_KEYS.CLASSES);
+          }
+        } else {
+          console.warn('Format de données inattendu:', classesData);
+          setClasses([]);
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des classes depuis l\'API:', error);
         setClasses([]);
@@ -101,6 +133,7 @@ const AdminClasses = () => {
       setFormData({
         nom: '',
         niveau: '',
+        filiere: 'IIR', // Ajouter le champ filiere avec une valeur par défaut
         annee_scolaire: '2024-2025'
       });
     }
@@ -144,66 +177,51 @@ const AdminClasses = () => {
   };
 
   const handleSubmitForm = async () => {
-    if (!validateForm()) return;
+    // Valider le formulaire avant de soumettre
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
     
     try {
+      setLoading(true);
+      
+      // Préparer les données à envoyer
+      const classeData = {
+        ...formData
+      };
+      
+      console.log('Données du formulaire classe à envoyer:', classeData);
+      
+      let result;
       if (formType === 'create') {
-        // Créer une nouvelle classe via l'API REST
-        const newClasse = await classeService.create({
-          nom: formData.nom,
-          niveau: formData.niveau,
-          filiere: formData.filiere,
-          annee_scolaire: formData.annee_scolaire || '2024-2025'
-        });
-        console.log('Classe créée avec succès:', newClasse);
-        
-        // Mettre à jour l'état local
-        setClasses([...classes, newClasse]);
-        showSnackbar('Classe ajoutée avec succès', 'success');
-      } else if (currentClasse) {
-        // Mettre à jour la classe via l'API REST
-        const updatedClasse = await classeService.update(currentClasse.id, {
-          nom: formData.nom,
-          niveau: formData.niveau,
-          filiere: formData.filiere,
-          annee_scolaire: formData.annee_scolaire || currentClasse.annee_scolaire
-        });
-        console.log('Classe mise à jour avec succès:', updatedClasse);
-        
-        // Mettre à jour l'état local
-        const updatedClasses = classes.map(classe => 
-          classe.id === currentClasse.id ? updatedClasse : classe
-        );
-        setClasses(updatedClasses);
-        showSnackbar('Classe modifiée avec succès', 'success');
+        // Utiliser directement classeService.create au lieu de postData
+        result = await classeService.create(classeData);
+        console.log('Résultat de la création via API:', result);
+        showSnackbar('Classe créée avec succès', 'success');
+      } else {
+        // Utiliser directement classeService.update au lieu de putData
+        result = await classeService.update(currentClasse.id, classeData);
+        console.log('Résultat de la mise à jour via API:', result);
+        showSnackbar('Classe mise à jour avec succès', 'success');
       }
       
-      // Fermer le formulaire sans appeler loadData() car nous avons déjà mis à jour l'état local
+      console.log('Résultat de l\'opération:', result);
+      
+      // Fermer le formulaire
       handleCloseForm();
+      
+      // Attendre un peu avant de rafraîchir les données pour laisser le temps au serveur
+      setTimeout(async () => {
+        await loadData();
+      }, 500);
+      
     } catch (error) {
       console.error('Erreur lors de la soumission du formulaire:', error);
-      
-      // Message d'erreur plus descriptif
-      if (error.response && error.response.data) {
-        console.error('Détails de l\'erreur:', error.response.data);
-        showSnackbar(`Erreur: ${JSON.stringify(error.response.data)}`, 'error');
-        
-        // Gestion des erreurs de validation du backend
-        const backendErrors = {};
-        Object.keys(error.response.data).forEach(key => {
-          const errorValue = error.response.data[key];
-          if (Array.isArray(errorValue)) {
-            backendErrors[key] = errorValue.join(' ');
-          } else if (typeof errorValue === 'string') {
-            backendErrors[key] = errorValue;
-          } else {
-            backendErrors[key] = String(errorValue);
-          }
-        });
-        setFormErrors(backendErrors);
-      } else {
-        showSnackbar('Erreur réseau lors de l\'enregistrement', 'error');
-      }
+      showSnackbar(`Erreur lors de l'enregistrement: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -213,39 +231,79 @@ const AdminClasses = () => {
   };
 
   const handleConfirmDelete = async () => {
+    setLoading(true);
+    
     try {
+      // Déclarer la variable deleted ici avant de l'utiliser
+      let deleted = false;
+      let allDeleted = false;
+      
       if (classeToDelete) {
-        // Suppression via l'API REST
-        await classeService.delete(classeToDelete.id);
-        
-        // Mettre à jour l'état local
-        const updatedClasses = classes.filter(classe => classe.id !== classeToDelete.id);
-        setClasses(updatedClasses);
-        showSnackbar('Classe supprimée avec succès', 'success');
-        
+        // Suppression d'une seule classe
+        try {
+          await classeService.delete(classeToDelete.id);
+          console.log(`Classe ${classeToDelete.id} supprimée avec succès`);
+          deleted = true;
+          
+          // Supprimer également de l'état local
+          const updatedClasses = classes.filter(c => c.id !== classeToDelete.id);
+          setClasses(updatedClasses);
+          
+          // Vérifier si c'était la dernière classe
+          if (updatedClasses.length === 0) {
+            allDeleted = true;
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la classe:', error);
+          showSnackbar(`Erreur lors de la suppression de la classe ${classeToDelete.nom}`, 'error');
+        }
       } else if (selectedRows.length > 0) {
-        // Suppression multiple via l'API REST
-        for (const id of selectedRows) {
-          await classeService.delete(id);
+        // Suppression multiple
+        try {
+          // Créer un tableau de promesses pour la suppression
+          const deletePromises = selectedRows.map(id => classeService.delete(id));
+          
+          // Attendre que toutes les suppressions soient terminées
+          await Promise.all(deletePromises);
+          console.log(`${selectedRows.length} classes supprimées avec succès`);
+          deleted = true;
+          
+          // Supprimer également de l'état local
+          const updatedClasses = classes.filter(c => !selectedRows.includes(c.id));
+          setClasses(updatedClasses);
+          
+          // Vérifier si toutes les classes ont été supprimées
+          if (updatedClasses.length === 0) {
+            allDeleted = true;
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression multiple de classes:', error);
+          showSnackbar('Erreur lors de la suppression des classes sélectionnées', 'error');
+        }
+      }
+      
+      if (deleted) {
+        // Si toutes les classes ont été supprimées, marquer l'entité pour éviter la réinitialisation
+        if (allDeleted) {
+          console.log('Toutes les classes ont été supprimées, marquage comme supprimées');
+          markEntityAsDeleted(ENTITY_KEYS.CLASSES);
         }
         
-        // Mettre à jour l'état local
-        const updatedClasses = classes.filter(classe => !selectedRows.includes(classe.id));
-        setClasses(updatedClasses);
-        showSnackbar(`${selectedRows.length} classes supprimées avec succès`, 'success');
+        showSnackbar('Classe(s) supprimée(s) avec succès', 'success');
+        
+        // Réinitialiser la sélection
         setSelectedRows([]);
-      } else {
-        return; // Aucun élément à supprimer
       }
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
-      showSnackbar('Erreur lors de la suppression: ' + (error.message || 'Erreur inconnue'), 'error');
+      showSnackbar('Une erreur est survenue lors de la suppression', 'error');
     } finally {
       setOpenConfirm(false);
       setClasseToDelete(null);
+      setLoading(false);
     }
   };
-
+  
   const handleCancelDelete = () => {
     setOpenConfirm(false);
     setClasseToDelete(null);
