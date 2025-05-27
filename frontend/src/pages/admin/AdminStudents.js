@@ -32,6 +32,7 @@ import * as XLSX from 'xlsx';
 
 import { etudiantService, classeService } from '../../utils/apiService';
 import { NIVEAUX_INGENIEUR, FILIERES_CHOICES } from '../../utils/constants';
+import { formatEtudiantData, transformEtudiantFromApi } from '../../utils/formatApiData';
 
 const AdminStudents = () => {
   const [etudiants, setEtudiants] = useState([]);
@@ -86,25 +87,16 @@ const AdminStudents = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Chargement des étudiants depuis l'API REST
-      try {
-        const etudiantsData = await etudiantService.getAll();
-        console.log('Données d\'étudiants récupérées depuis l\'API');
-        setEtudiants(Array.isArray(etudiantsData) ? etudiantsData : []);
-      } catch (error) {
-        console.error('Erreur lors du chargement des étudiants depuis l\'API:', error);
-        setEtudiants([]);
-      }
+      // Charger les étudiants
+      const etudiantsData = await etudiantService.getAll();
+      // Transformer les données pour le frontend
+      const transformedEtudiants = etudiantsData.map(etudiant => transformEtudiantFromApi(etudiant));
+      setEtudiants(transformedEtudiants);
       
-      // Chargement des classes depuis l'API REST
-      try {
-        const classesData = await classeService.getAll();
-        console.log('Classes reçues du backend:', classesData);
-        setClasses(Array.isArray(classesData) ? classesData : []);
-      } catch (error) {
-        console.error('Erreur lors du chargement des classes depuis l\'API:', error);
-        setClasses([]);
-      }
+      // Charger les classes
+      const classesData = await classeService.getAll();
+      setClasses(classesData);
+      setFilteredClasses(classesData); // Initialiser les classes filtrées avec toutes les classes
     } catch (error) {
       console.error('Erreur générale lors du chargement des données:', error);
     } finally {
@@ -367,7 +359,7 @@ const AdminStudents = () => {
     
     try {
       // Préparer les données pour l'envoi
-      const etudiantData = {
+      const rawEtudiantData = {
         nom: formData.nom || '',
         prenom: formData.prenom || '',
         date_naissance: formData.date_naissance || new Date().toISOString().split('T')[0],
@@ -384,16 +376,22 @@ const AdminStudents = () => {
       let generatedPassword = '';
       if (formType === 'create') {
         generatedPassword = `${formData.nom.toLowerCase()}@${formData.prenom.toLowerCase()}`;
-        etudiantData.password = generatedPassword;
+        rawEtudiantData.password = generatedPassword;
         console.log('Mot de passe généré:', generatedPassword);
       }
       
-      console.log('Envoi des données:', etudiantData);
+      // Formater les données pour l'API
+      const etudiantData = formatEtudiantData(rawEtudiantData);
+      console.log('Envoi des données formatées:', etudiantData);
       
       if (formType === 'create') {
         // Créer un nouvel étudiant via l'API REST
-        const newEtudiant = await etudiantService.create(etudiantData);
-        console.log('Étudiant créé avec succès:', newEtudiant);
+        const response = await etudiantService.create(etudiantData);
+        console.log('Réponse de l\'API (création):', response);
+        
+        // Transformer les données pour le frontend
+        const newEtudiant = transformEtudiantFromApi(response);
+        console.log('Étudiant transformé:', newEtudiant);
         
         // Ajouter l'étudiant à la liste existante
         setEtudiants([...etudiants, newEtudiant]);
@@ -401,17 +399,19 @@ const AdminStudents = () => {
         
       } else if (formType === 'edit' && currentEtudiant) {
         // Mettre à jour l'étudiant via l'API REST
-        const updatedEtudiant = await etudiantService.update(currentEtudiant.id, etudiantData);
-        console.log('Étudiant mis à jour avec succès:', updatedEtudiant);
+        const response = await etudiantService.update(currentEtudiant.id, etudiantData);
+        console.log('Réponse de l\'API (mise à jour):', response);
         
-        // Mettre à jour l'étudiant dans la liste locale
+        // Transformer les données pour le frontend
+        const updatedEtudiant = transformEtudiantFromApi(response);
+        console.log('Étudiant transformé:', updatedEtudiant);
+        
+        // Mettre à jour la liste des étudiants
         const updatedEtudiants = etudiants.map(etudiant => 
           etudiant.id === currentEtudiant.id ? updatedEtudiant : etudiant
         );
-        
-        // Mettre à jour l'état local
         setEtudiants(updatedEtudiants);
-        showSnackbar('Étudiant modifié avec succès', 'success');
+        showSnackbar('Étudiant mis à jour avec succès', 'success');
       }
       
       // Fermer le formulaire sans appeler loadData() car nous avons déjà mis à jour l'état local

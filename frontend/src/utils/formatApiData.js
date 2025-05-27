@@ -129,7 +129,61 @@ export const transformProfesseurFromApi = (professeur) => {
   return transformed;
 };
 
+/**
+ * Formate les données d'un étudiant pour l'envoi à l'API
+ * @param {Object} data - Les données de l'étudiant à formater
+ * @returns {Object} - Les données formatées pour l'API
+ */
+export const formatEtudiantData = (data) => {
+  const formattedData = { ...data };
+  
+  // Vérifier que la classe est présente et la formater correctement
+  if (formattedData.classe) {
+    // S'assurer que la classe est un entier pour l'API
+    if (typeof formattedData.classe === 'string' && formattedData.classe.trim() !== '') {
+      formattedData.classe = parseInt(formattedData.classe, 10);
+    }
+  }
+  
+  // Vérifier que le niveau est présent et le formater correctement
+  if (formattedData.niveau) {
+    // S'assurer que le niveau est une chaîne pour l'API
+    if (typeof formattedData.niveau !== 'string') {
+      formattedData.niveau = formattedData.niveau.toString();
+    }
+  }
+  
+  console.log('Données étudiant formatées pour l\'API:', formattedData);
+  return formattedData;
+};
+
+/**
+ * Transforme les données d'un étudiant reçues de l'API pour utilisation dans le frontend
+ * @param {Object} etudiant - Les données de l'étudiant reçues de l'API
+ * @returns {Object} - Les données transformées pour le frontend
+ */
+export const transformEtudiantFromApi = (etudiant) => {
+  if (!etudiant) return null;
+  
+  const transformedData = { ...etudiant };
+  
+  // Assurer que la classe est au bon format (string) pour les composants MUI
+  if (transformedData.classe !== null && transformedData.classe !== undefined) {
+    transformedData.classe = transformedData.classe.toString();
+  }
+  
+  // Assurer que le niveau est au bon format (string) pour les composants MUI
+  if (transformedData.niveau !== null && transformedData.niveau !== undefined) {
+    transformedData.niveau = transformedData.niveau.toString();
+  }
+  
+  console.log('Données étudiant transformées depuis l\'API:', transformedData);
+  return transformedData;
+};
+
 export default {
   formatProfesseurData,
-  transformProfesseurFromApi
+  transformProfesseurFromApi,
+  formatEtudiantData,
+  transformEtudiantFromApi
 };
